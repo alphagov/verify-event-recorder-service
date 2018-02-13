@@ -5,3 +5,4 @@ class TestStringMethods(unittest.TestCase):
 
     def test(self):
         service_handler.hello_world()
+        raise
