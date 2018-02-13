@@ -4,8 +4,7 @@ pipeline {
   stages {
     stage('Build') {
       agent {
-        docker { image 'python:3'
-                 privileged: true}
+         dockerfile { additionalBuildArgs "--pull" }
       }
       steps { sh './pre-commit.sh' }
     }
