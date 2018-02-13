@@ -6,7 +6,7 @@ pipeline {
       agent {
          dockerfile { additionalBuildArgs "--pull" }
       }
-      steps { sh './pre-commit.sh' }
+      steps { sudo -H sh './pre-commit.sh' }
     }
   }
 }

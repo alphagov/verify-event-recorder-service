@@ -1,2 +1,2 @@
 FROM python:3
-CMD ["./pre-commit"]
+CMD ["sudo -H  ./pre-commit"]
