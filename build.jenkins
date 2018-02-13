@@ -6,7 +6,7 @@ pipeline {
       agent {
          dockerfile { additionalBuildArgs "--pull" }
       }
-      steps { './pre-commit.sh' }
+      steps { sh './pre-commit.sh' }
     }
   }
 }
