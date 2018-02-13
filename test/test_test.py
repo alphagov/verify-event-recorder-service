@@ -5,3 +5,4 @@ class TestStringMethods(unittest.TestCase):
 
     def test(self):
         service_handler.hello_world()
+        self.assertEquals(1, 2)
