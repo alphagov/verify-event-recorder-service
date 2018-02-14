@@ -8,7 +8,7 @@ pipeline {
                    args '-u root:sudo'}
       }
       steps { sh './pre-commit.sh'
-              sh 'zip -r -X verify-event-recorder--service.zip src' }
+              sh 'tar -zcvf verify-event-recorder-service.zip src/' }
 
     }
   }
