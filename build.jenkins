@@ -7,8 +7,7 @@ pipeline {
          docker { image 'python:3'
                    args '-u root:sudo'}
       }
-      steps { sh './pre-commit.sh'
-              sh 'zip -r -X verify-event-recorder--service.zip src' }
+      steps { sh './pre-commit.sh'}
 
     }
   }
