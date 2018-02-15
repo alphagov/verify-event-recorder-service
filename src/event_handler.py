@@ -1,9 +1,10 @@
 import boto3
 import os
+from src.event import from_json
 
 
 # noinspection PyUnusedLocal
-def store_queued_events(event, context):
+def store_queued_events(_, __):
     sqs_client = boto3.client('sqs')
     queue_url = os.environ['QUEUE_URL']
 
@@ -12,7 +13,14 @@ def store_queued_events(event, context):
         if message is None:
             break
 
-        print(message['Body'])
+        # noinspection PyBroadException
+        # catch all errors and log them - we never want a single failing message to kill the process.
+        try:
+            event = from_json(message['Body'])
+            print(event.event_id)
+            __delete_message(sqs_client, queue_url, message)
+        except Exception as exception:
+            print('Failed to store message - Exception: {0}'.format(str(message)))
 
 
 def __fetch_single_message(sqs_client, queue_url):
@@ -23,3 +31,10 @@ def __fetch_single_message(sqs_client, queue_url):
         WaitTimeSeconds=0,  # Don't wait for messages - if there aren't any left, then this lambda's job is done
     )
     return response['Messages'][0] if 'Messages' in response and response['Messages'] else None
+
+
+def __delete_message(sqs_client, queue_url, message):
+    sqs_client.delete_message(
+        QueueUrl=queue_url,
+        ReceiptHandle=message['ReceiptHandle']
+    )
