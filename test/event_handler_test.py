@@ -1,17 +1,17 @@
-import unittest
 import os
 import boto3
 import io
 import json
 import uuid
 from moto import mock_sqs
+from unittest import TestCase
 from unittest.mock import patch
 
 from src import event_handler
 
 
 @mock_sqs
-class EventHandlerTest(unittest.TestCase):
+class EventHandlerTest(TestCase):
 
     def setUp(self):
         setup_stub_aws_config()
