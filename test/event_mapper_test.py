@@ -2,7 +2,7 @@ import json
 from json import JSONDecodeError
 from unittest import TestCase
 
-from src.event import from_json
+from src.event_mapper import event_from_json
 
 EVENT_ID = '1234-abcd'
 EVENT_TYPE = 'session_event'
@@ -15,7 +15,7 @@ class EventTest(TestCase):
     def test_can_create_event_from_valid_message_string(self):
         json_string = json.dumps(valid_message_object())
 
-        event = from_json(json_string)
+        event = event_from_json(json_string)
 
         self.assertEqual(event.event_id, EVENT_ID)
         self.assertEqual(event.event_type, EVENT_TYPE)
@@ -27,7 +27,7 @@ class EventTest(TestCase):
         message_object['foo'] = 'bar'
         json_string = json.dumps(message_object)
 
-        event = from_json(json_string)
+        event = event_from_json(json_string)
 
         self.assertEqual(event.event_id, EVENT_ID)
         self.assertEqual(event.event_type, EVENT_TYPE)
@@ -48,7 +48,7 @@ class EventTest(TestCase):
             json_string = json.dumps(message_object)
 
             with self.assertRaises(ValueError) as raised_exception:
-                from_json(json_string)
+                event_from_json(json_string)
 
             self.assertEqual(
                 str(raised_exception.exception),
@@ -57,7 +57,7 @@ class EventTest(TestCase):
 
     def test_throws_validation_exception_if_string_is_not_valid_json(self):
         with self.assertRaises(JSONDecodeError):
-            from_json('not valid')
+            event_from_json('not valid')
 
 
 def valid_message_object():

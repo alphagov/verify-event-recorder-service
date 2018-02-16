@@ -1,6 +1,6 @@
 import boto3
 import os
-from src.event import from_json
+from src.event_mapper import event_from_json
 
 
 # noinspection PyUnusedLocal
@@ -16,7 +16,7 @@ def store_queued_events(_, __):
         # noinspection PyBroadException
         # catch all errors and log them - we never want a single failing message to kill the process.
         try:
-            event = from_json(message['Body'])
+            event = event_from_json(message['Body'])
             print(event.event_id)
             __delete_message(sqs_client, queue_url, message)
         except Exception as exception:
