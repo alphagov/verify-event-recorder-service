@@ -4,12 +4,12 @@ pipeline {
   stages {
     stage('Build') {
       agent {
-         docker { image 'python:3'
-                   args '-u root:sudo'}
+        dockerfile { additionalBuildArgs "--pull" }
       }
-      steps { sh './pre-commit.sh'
-              sh 'tar -zcvf verify-event-recorder-service.zip src/' }
-
+      steps {
+        sh './run-tests.sh'
+        sh 'tar -zcvf verify-event-recorder-service.zip src/'
+      }
     }
   }
 }

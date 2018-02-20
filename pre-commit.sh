@@ -1,4 +1,11 @@
 #!/usr/bin/env bash
 
-pip3 install -r requirements.txt
-python3  -m unittest discover test/ "*_test.py"
+docker build -t event-emitter-image .
+docker create -t --name event-emitter-container event-emitter-image
+docker start event-emitter-container
+
+docker cp . event-emitter-container:/event-emitter
+docker exec -t --privileged --workdir /event-emitter event-emitter-container ./run-tests.sh
+
+docker stop event-emitter-container
+docker rm event-emitter-container
