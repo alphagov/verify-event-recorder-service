@@ -5,7 +5,7 @@ docker create -t --name event-emitter-container event-emitter-image
 docker start event-emitter-container
 
 docker cp . event-emitter-container:/event-emitter
-docker exec -t --privileged --workdir /event-emitter event-emitter-container ./run-tests.sh
+docker exec -t --workdir /event-emitter event-emitter-container ./run-tests.sh
 
 docker stop event-emitter-container
 docker rm event-emitter-container
