@@ -4,7 +4,10 @@ pipeline {
   stages {
     stage('Build') {
       agent {
-        dockerfile { additionalBuildArgs "--pull" }
+        dockerfile {
+          additionalBuildArgs "--pull"
+          args "--privileged"
+        }
       }
       steps {
         sh './run-tests.sh'
