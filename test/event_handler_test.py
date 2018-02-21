@@ -83,6 +83,24 @@ class EventHandlerTest(TestCase):
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '1')
 
+    @patch('sys.stdout', new_callable=io.StringIO)
+    def test_records_error_but_does_delete_messages_for_duplicate_events(self, mock_stdout):
+        self.__send_messages_to_queue(
+            [
+                create_event_string('sample-id-1'),
+                create_event_string('sample-id-1'),
+            ]
+        )
+
+        event_handler.store_queued_events(None, None)
+
+        self.__assert_database_has_records(['sample-id-1'])
+        self.assertEqual(
+            mock_stdout.getvalue(),
+            'Failed to store message. The Event ID sample-id-1 already exists in the database\n')
+        self.assertEqual(self.__number_of_visible_messages(), '0')
+        self.assertEqual(self.__number_of_hidden_messages(), '0')
+
     def __send_messages_to_queue(self, messages):
         for message in messages:
             self.__sqs_client.send_message(
