@@ -3,13 +3,14 @@ pipeline {
 
   stages {
     stage('Create Docker Image') {
-      steps {
-        agent {
-          dockerfile {
-            additionalBuildArgs '--tag event-recorder-image'
-          }
-          reuseNode true
+      agent {
+        dockerfile {
+          additionalBuildArgs '--tag event-recorder-image'
         }
+        reuseNode true
+      }
+      steps {
+        sh 'echo "Built Docker Container"'
       }
     }
     stage('Run Tests') {
