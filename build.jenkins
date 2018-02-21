@@ -2,12 +2,23 @@ pipeline {
   agent none
 
   stages {
-    stage('Build') {
-      agent {
-        dockerfile {
-          additionalBuildArgs "--pull"
-          args "--privileged"
+    stage('Create Docker Image') {
+      steps {
+        agent {
+          dockerfile {
+            additionalBuildArgs '--tag event-recorder-image'
+          }
+          reuseNode true
         }
+      }
+    }
+    stage('Run Tests') {
+      agent {
+        docker {
+          image 'event-recorder-image'
+          args '-u root:sudo'
+        }
+        reuseNode true
       }
       steps {
         sh './run-tests.sh'
