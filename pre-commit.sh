@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-docker build -t event-emitter-image .
-docker create -t --name event-emitter-container event-emitter-image
-docker start event-emitter-container
+docker build -t event-recorder-image .
+docker create -t --name event-recorder-container event-recorder-image
+docker start event-recorder-container
 
-docker cp . event-emitter-container:/event-emitter
-docker exec -t --workdir /event-emitter event-emitter-container ./run-tests.sh
+docker cp . event-recorder-container:/event-recorder
+docker exec -t --workdir /event-recorder event-recorder-container ./run-tests.sh
 
-docker stop event-emitter-container
-docker rm event-emitter-container
+docker stop event-recorder-container
+docker rm event-recorder-container
