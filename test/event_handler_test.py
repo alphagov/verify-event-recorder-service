@@ -132,8 +132,8 @@ class EventHandlerTest(TestCase):
         for event_id in expected_event_ids:
             with RunInTransaction(self.db_connection) as cursor:
                 cursor.execute("""
-                    SELECT * FROM events WHERE event_id = '%s';
-                """ % event_id)
+                    SELECT * FROM events WHERE event_id = %s;
+                """, [event_id])
                 matching_records = cursor.fetchone()
 
             self.assertEqual(matching_records[0], event_id)

@@ -48,13 +48,13 @@ def __write_to_database(event, db_connection):
                 INSERT INTO events
                 (event_id, event_type, timestamp, details)
                 VALUES
-                ('%s', '%s', '%s', '%s');
-            """ % (
+                (%s, %s, %s, %s);
+            """, [
                 event.event_id,
                 event.event_type,
                 event.timestamp,
                 json.dumps(event.details)
-            ))
+            ])
     except IntegrityError as integrityError:
         if integrityError.pgcode == POSTGRES_UNIQUE_VIOLATION_ERROR_CODE:
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
