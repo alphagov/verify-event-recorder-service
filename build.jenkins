@@ -17,7 +17,6 @@ pipeline {
       agent {
         docker {
           image 'event-recorder-image'
-          args '-u root:sudo'
           reuseNode true
         }
       }
