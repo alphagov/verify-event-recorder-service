@@ -10,5 +10,5 @@ then
 fi
 
 pip3 install virtualenv
-virtualenv --python=python3 event_recorder_virtualenv
-pip3 install -r requirements.txt
+virtualenv --python=python3 env
+env/bin/pip install -r requirements.txt
