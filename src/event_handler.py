@@ -5,6 +5,7 @@ from psycopg2 import IntegrityError
 from psycopg2.errorcodes import UNIQUE_VIOLATION
 
 from src.db_helper import RunInTransaction, create_db_connection
+from src.decryption import fetch_decryption_key, decrypt_message
 from src.event_mapper import event_from_json
 
 
@@ -13,6 +14,7 @@ def store_queued_events(_, __):
     sqs_client = boto3.client('sqs')
     queue_url = os.environ['QUEUE_URL']
     db_connection = create_db_connection()
+    decryption_key = fetch_decryption_key()
 
     while True:
         message = __fetch_single_message(sqs_client, queue_url)
@@ -22,7 +24,8 @@ def store_queued_events(_, __):
         # noinspection PyBroadException
         # catch all errors and log them - we never want a single failing message to kill the process.
         try:
-            event = event_from_json(message['Body'])
+            decrypted_message = decrypt_message(message['Body'], decryption_key)
+            event = event_from_json(decrypted_message)
             __write_to_database(event, db_connection)
             __delete_message(sqs_client, queue_url, message)
         except Exception as exception:
