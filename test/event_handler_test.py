@@ -37,22 +37,6 @@ class EventHandlerTest(TestCase):
     @classmethod
     def setUpClass(cls):
         cls.db_connection = psycopg2.connect(cls.db_connection_string)
-        with RunInTransaction(cls.db_connection) as cursor:
-            cursor.execute("""
-                CREATE TABLE events (
-                    event_id VARCHAR(40) NOT NULL PRIMARY KEY,
-                    event_type VARCHAR(20) NOT NULL,
-                    timestamp TIMESTAMP NOT NULL,
-                    details JSON NOT NULL
-                );
-            """)
-
-    @classmethod
-    def tearDownClass(cls):
-        with RunInTransaction(cls.db_connection) as cursor:
-            cursor.execute("""
-                DROP TABLE events;
-            """)
 
     def setUp(self):
         setup_stub_aws_config()
