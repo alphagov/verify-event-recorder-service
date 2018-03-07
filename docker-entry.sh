@@ -17,4 +17,4 @@ cd verify-event-store-schema-master
 
 cd ..
 
-pip3 install -r /usr/local/bin/requirements.txt
+pip3 install -r /usr/local/bin/requirements/dev.txt

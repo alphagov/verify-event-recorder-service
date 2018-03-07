@@ -1,3 +1,6 @@
 .idea
 *.pyc
 env
+package-env
+tmp
+package.zip
