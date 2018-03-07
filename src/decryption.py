@@ -6,11 +6,6 @@ from Crypto.Cipher import AES
 __SALT_LENGTH = 16
 
 
-def fetch_decryption_key():
-    encrypted_key = __fetch_encrypted_key()
-    return __decrypt_key(encrypted_key)
-
-
 def decrypt_message(encrypted_message, decryption_key):
     """
     encrypted_message expects a string in the format "<16 character plaintext salt><AES CBC encrypted message>"
@@ -28,17 +23,3 @@ def __pkcs5_unpad(message):
     """
     final_character = message[-1]
     return message[0:-ord(final_character)]
-
-
-def __fetch_encrypted_key():
-    s3_client = boto3.client('s3')
-    bucket_name = os.environ['DECRYPTION_KEY_BUCKET_NAME']
-    filename = os.environ['DECRYPTION_KEY_FILE_NAME']
-    response = s3_client.get_object(Bucket=bucket_name, Key=filename)
-    return response['Body'].read()
-
-
-def __decrypt_key(encrypted_key):
-    kms_client = boto3.client('kms')
-    return kms_client.decrypt(CiphertextBlob=encrypted_key)['Plaintext'].decode('utf-8')
-
