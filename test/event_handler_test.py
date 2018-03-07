@@ -2,18 +2,16 @@ import os
 import boto3
 import io
 import json
-import base64
 import uuid
 import psycopg2
-from moto import mock_sqs, mock_kms, mock_s3
+from moto import mock_sqs, mock_s3
 from unittest import TestCase
 from unittest.mock import patch
 from datetime import datetime
 from Crypto.Cipher import AES
-from uuid import uuid4
 
 from src import event_handler
-from src.db_helper import RunInTransaction
+from src.database import RunInTransaction
 from test.test_encrypter import encrypt_string
 
 EVENT_TYPE = 'session_event'
@@ -23,11 +21,9 @@ ENCRYPTION_KEY = b'sixteen byte key'
 
 
 @mock_sqs
-@mock_kms
 @mock_s3
 class EventHandlerTest(TestCase):
     __sqs_client = None
-    __kms_client = None
     __s3_client = None
     __queue_url = None
     __key_id = None
@@ -43,7 +39,6 @@ class EventHandlerTest(TestCase):
         self.__setup_db_connection()
         self.__setup_sqs()
         self.__setup_s3()
-        self.__setup_kms()
 
     def tearDown(self):
         self.__clean_db()
@@ -138,10 +133,6 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[2], datetime.strptime(TIMESTAMP, '%Y-%m-%d %H:%M:%S'))
             self.assertEqual(matching_records[3], {'sessionEventType': SESSION_EVENT_TYPE})
 
-    def __create_kms_master_key(self):
-        response = self.__kms_client.create_key()
-        return response['KeyMetadata']['Arn']
-
     def __setup_db_connection(self):
         os.environ['DB_CONNECTION_STRING'] = self.db_connection_string
 
@@ -158,23 +149,15 @@ class EventHandlerTest(TestCase):
         self.__s3_client.create_bucket(
             Bucket='key-bucket',
         )
-
-    def __setup_kms(self):
-        self.__kms_client = boto3.client('kms')
-        self.__key_id = self.__create_kms_master_key()
         self.__write_encryption_key_to_s3()
 
     def __write_encryption_key_to_s3(self):
         bucket_name = 'key-bucket'
         filename = 'encrypted-event-key.txt'
-        encrypted_key = self.__kms_client.encrypt(
-            Plaintext=ENCRYPTION_KEY,
-            KeyId=self.__key_id
-        )['CiphertextBlob']
         self.__s3_client.put_object(
             Bucket=bucket_name,
             Key=filename,
-            Body=encrypted_key
+            Body=ENCRYPTION_KEY
         )
         os.environ['DECRYPTION_KEY_BUCKET_NAME'] = bucket_name
         os.environ['DECRYPTION_KEY_FILE_NAME'] = filename
