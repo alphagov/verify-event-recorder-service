@@ -17,4 +17,6 @@ cd verify-event-store-schema-master
 
 cd ..
 
-pip3 install -r /usr/local/bin/requirements/dev.txt
+echo "Running pip install..."
+pip3 install -qr /usr/local/bin/requirements/dev.txt
+echo "Pip install complete"
