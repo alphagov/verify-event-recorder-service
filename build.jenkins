@@ -22,7 +22,7 @@ pipeline {
         }
       }
       steps {
-        sh './run-tests.sh'
+        sh './build/run-tests.sh'
         sh 'tar -zcvf verify-event-recorder-service.zip src/'
       }
     }
