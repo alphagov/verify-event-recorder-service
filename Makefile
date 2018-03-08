@@ -1,6 +1,9 @@
 .DEFAULT_GOAL := help
 .PHONY: test
 
+setup: ## Sets up a virtual environment and installs dependencies for use while developing
+	@build/setup.sh
+
 pre-commit: start-docker test kill-docker package ## Runs all necessary checks before you push commits
 
 start-docker: ## Build and start docker image for running tests

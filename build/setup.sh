@@ -11,4 +11,4 @@ fi
 
 pip3 install virtualenv
 virtualenv --python=python3 env
-../env/bin/pip install -r requirements/dev.txt
+env/bin/pip install -r requirements/dev.txt
