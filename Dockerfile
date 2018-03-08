@@ -6,3 +6,5 @@ COPY build/docker-entry.sh /usr/local/bin/
 COPY requirements/*.txt /usr/local/bin/requirements/
 
 RUN ./usr/local/bin/docker-entry.sh
+
+CMD service postgresql start && python3

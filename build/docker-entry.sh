@@ -20,3 +20,15 @@ cd ..
 echo "Running pip install..."
 pip3 install -qr /usr/local/bin/requirements/dev.txt
 echo "Pip install complete"
+
+echo "Configuring postgres to listen and accept connection from all addresses..."
+echo "
+listen_addresses = '*'
+" >> /etc/postgresql/9.4/main/postgresql.conf
+
+echo "
+# TYPE  DATABASE   USER   ADDRESS     METHOD
+local   all        all                md5
+host    all        all    0.0.0.0/0   md5
+" >> /etc/postgresql/9.4/main/pg_hba.conf
+
