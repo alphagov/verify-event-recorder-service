@@ -1,0 +1,7 @@
+-   repo: local
+    hooks:
+    -   id: python_tests
+        name: python tests
+        entry: ./pre-commit
+        language: script
+        types: [python]
