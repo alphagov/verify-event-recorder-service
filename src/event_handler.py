@@ -1,4 +1,5 @@
 import boto3
+import logging
 import os
 
 from src.database import create_db_connection, write_to_database
@@ -6,6 +7,8 @@ from src.decryption import decrypt_message
 from src.event_mapper import event_from_json
 from src.s3 import fetch_decryption_key
 from src.sqs import fetch_single_message, delete_message
+
+logging.basicConfig(level=logging.INFO)
 
 
 # noinspection PyUnusedLocal
@@ -28,4 +31,4 @@ def store_queued_events(_, __):
             write_to_database(event, db_connection)
             delete_message(sqs_client, queue_url, message)
         except Exception as exception:
-            print('Failed to store message - Exception: {0}'.format(str(exception)))
+            logging.getLogger('event-recorder').exception('Failed to store message')

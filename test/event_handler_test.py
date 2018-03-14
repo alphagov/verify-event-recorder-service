@@ -1,14 +1,13 @@
 import os
 import boto3
-import io
 import json
 import uuid
 import psycopg2
 from moto import mock_sqs, mock_s3
 from unittest import TestCase
-from unittest.mock import patch
 from datetime import datetime
 from Crypto.Cipher import AES
+from testfixtures import LogCapture
 
 from src import event_handler
 from src.database import RunInTransaction
@@ -57,39 +56,49 @@ class EventHandlerTest(TestCase):
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
 
-    @patch('sys.stdout', new_callable=io.StringIO)
-    def test_does_not_delete_invalid_messages(self, mock_stdout):
-        self.__encrypt_and_send_to_sqs(
-            [
-                'invalid event',
-                create_event_string('sample-id-2'),
-            ]
-        )
+    def test_does_not_delete_invalid_messages(self):
+        with LogCapture('event-recorder', propagate=False) as log_capture:
+            self.__encrypt_and_send_to_sqs(
+                [
+                    'invalid event',
+                    create_event_string('sample-id-2'),
+                ]
+            )
 
-        event_handler.store_queued_events(None, None)
+            event_handler.store_queued_events(None, None)
 
-        self.__assert_database_has_records(['sample-id-2'])
-        self.assertRegex(mock_stdout.getvalue(), 'Failed to store message - Exception:')
-        self.assertEqual(self.__number_of_visible_messages(), '0')
-        self.assertEqual(self.__number_of_hidden_messages(), '1')
+            self.__assert_database_has_records(['sample-id-2'])
+            log_capture.check(
+                (
+                    'event-recorder',
+                    'ERROR',
+                    'Failed to store message'
+                )
+            )
+            self.assertEqual(self.__number_of_visible_messages(), '0')
+            self.assertEqual(self.__number_of_hidden_messages(), '1')
 
-    @patch('sys.stdout', new_callable=io.StringIO)
-    def test_records_error_but_does_delete_messages_for_duplicate_events(self, mock_stdout):
-        self.__encrypt_and_send_to_sqs(
-            [
-                create_event_string('sample-id-1'),
-                create_event_string('sample-id-1'),
-            ]
-        )
+    def test_records_error_but_does_delete_messages_for_duplicate_events(self):
+        with LogCapture('event-recorder', propagate=False) as log_capture:
+            self.__encrypt_and_send_to_sqs(
+                [
+                    create_event_string('sample-id-1'),
+                    create_event_string('sample-id-1'),
+                ]
+            )
 
-        event_handler.store_queued_events(None, None)
+            event_handler.store_queued_events(None, None)
 
-        self.__assert_database_has_records(['sample-id-1'])
-        self.assertRegex(
-            mock_stdout.getvalue(),
-            'Failed to store message. The Event ID sample-id-1 already exists in the database\n')
-        self.assertEqual(self.__number_of_visible_messages(), '0')
-        self.assertEqual(self.__number_of_hidden_messages(), '0')
+            self.__assert_database_has_records(['sample-id-1'])
+            log_capture.check(
+                (
+                    'event-recorder',
+                    'WARNING',
+                    'Failed to store message. The Event ID sample-id-1 already exists in the database'
+                )
+            )
+            self.assertEqual(self.__number_of_visible_messages(), '0')
+            self.assertEqual(self.__number_of_hidden_messages(), '0')
 
     def __encrypt_and_send_to_sqs(self, messages):
         for message in messages:

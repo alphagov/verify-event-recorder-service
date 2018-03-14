@@ -4,6 +4,7 @@ import os
 
 from psycopg2._psycopg import IntegrityError
 from psycopg2.errorcodes import UNIQUE_VIOLATION
+from logging import getLogger
 
 
 def create_db_connection():
@@ -40,6 +41,6 @@ def write_to_database(event, db_connection):
         if integrityError.pgcode == UNIQUE_VIOLATION:
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
-            print('Failed to store message. The Event ID {0} already exists in the database'.format(event.event_id))
+            getLogger('event-recorder').warning('Failed to store message. The Event ID {0} already exists in the database'.format(event.event_id))
         else:
             raise integrityError

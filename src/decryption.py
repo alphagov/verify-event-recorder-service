@@ -1,6 +1,4 @@
 import base64
-import boto3
-import os
 from Crypto.Cipher import AES
 
 __SALT_LENGTH = 16
