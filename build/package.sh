@@ -19,6 +19,10 @@ then
 fi
 
 virtualenv --python=python3 package-env
+ls
+ls package-env
+ls package-env/bin
+ls requirements
 package-env/bin/pip install -r requirements/prod.txt
 
 mkdir -p tmp/src/
