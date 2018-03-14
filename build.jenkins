@@ -22,6 +22,7 @@ pipeline {
         }
       }
       steps {
+        sh 'service postgresql start'
         sh './build/run-tests.sh'
         sh 'tar -zcvf verify-event-recorder-service.zip src/'
       }
