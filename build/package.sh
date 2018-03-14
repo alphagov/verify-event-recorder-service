@@ -13,6 +13,11 @@ then
     rm -f ${ARCHIVE_NAME}
 fi
 
+if [ -z "$(which virtualenv)" ];
+then
+    pip install virtualenv
+fi
+
 virtualenv --python=python3 package-env
 package-env/bin/pip install -r requirements/prod.txt
 
