@@ -19,11 +19,7 @@ then
 fi
 
 virtualenv --python=python3 package-env
-ls
-ls package-env
-ls package-env/bin
-ls requirements
-package-env/bin/pip install -r requirements/prod.txt
+package-env/bin/pip3.6 install -r requirements/prod.txt
 
 mkdir -p tmp/src/
 cp -r package-env/lib/python3.6/site-packages/ tmp/
