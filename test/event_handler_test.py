@@ -8,6 +8,7 @@ from unittest import TestCase
 from datetime import datetime
 from Crypto.Cipher import AES
 from testfixtures import LogCapture
+from retrying import retry
 
 from src import event_handler
 from src.database import RunInTransaction
@@ -31,6 +32,11 @@ class EventHandlerTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
+        cls.connect()
+
+    @classmethod
+    @retry(stop_max_attempt_number=5, wait_fixed=500)
+    def connect(cls):
         cls.db_connection = psycopg2.connect(cls.db_connection_string)
 
     def setUp(self):
