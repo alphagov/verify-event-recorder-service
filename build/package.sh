@@ -3,7 +3,7 @@ set -eu
 
 ARCHIVE_NAME=verify-event-recorder-service.zip
 
-if [ -f tmp/ ];
+if [ -d tmp/ ];
 then
     rm -r tmp/
 fi
