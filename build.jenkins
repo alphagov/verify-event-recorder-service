@@ -26,18 +26,5 @@ pipeline {
         sh './build/run-tests.sh'
       }
     }
-    stage('Package') {
-      agent {
-        docker {
-          image 'event-recorder-image'
-          args '-u root:sudo'
-          reuseNode true
-        }
-      }
-      steps {
-        sh 'make package'
-        sh 'ls'
-      }
-    }
   }
 }
