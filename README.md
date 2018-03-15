@@ -39,3 +39,20 @@ as they need a docker file running to work!)
 
 To push without running the tests, for example if you've only changed a comment, you can disable them:
 `git push --no-verify`
+
+## Packaging the application for release
+Build the zip file to pass to Lambda by running
+```
+make package
+```
+
+### Binaries
+Lambda ought to work by providing a zip of the source code and the python files for the dependencies.
+However, some of our python libraries are not pure python. Instead they rely on some C binaries.
+
+These C binaries are compiled for a specific OS (and version of python) and are not valid in other environments.
+
+Therefore binaries built on our dev machines will not work on Lambda.
+
+As a workaround, we have created all the required binaries on a linux VM, and have added them to source control. Our 
+package task will use these binaries in preference to any which are created on the host system.

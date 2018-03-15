@@ -15,15 +15,18 @@ fi
 
 if [ -z "$(which virtualenv)" ];
 then
-    pip install virtualenv
+    pip3 install virtualenv
 fi
 
 virtualenv --python=python3 package-env
-package-env/bin/pip3.6 install -r requirements/prod.txt
+package-env/bin/pip install -r requirements/prod.txt
 
 mkdir -p tmp/src/
-cp -r package-env/lib/python3.6/site-packages/ tmp/
-cp -r src/ tmp/src/
+cp -r package-env/lib/python3.6/site-packages/** tmp/.
+cp -r src/** tmp/src/.
+
+find tmp/ -type f -name '*.so' -delete
+cp -r build/linux-binaries/** tmp/.
 
 echo "Zipping verify-event-recorder-service"
 cd tmp
