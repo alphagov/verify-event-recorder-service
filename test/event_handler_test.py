@@ -108,7 +108,7 @@ class EventHandlerTest(TestCase):
 
     def __encrypt_and_send_to_sqs(self, messages):
         for message in messages:
-            encrypted_message = encrypt_string(pad(message), ENCRYPTION_KEY)
+            encrypted_message = encrypt_string(message, ENCRYPTION_KEY)
             self.__sqs_client.send_message(
                 QueueUrl=self.__queue_url,
                 MessageBody=encrypted_message,
@@ -176,11 +176,6 @@ class EventHandlerTest(TestCase):
         )
         os.environ['DECRYPTION_KEY_BUCKET_NAME'] = bucket_name
         os.environ['DECRYPTION_KEY_FILE_NAME'] = filename
-
-
-def pad(text):
-    number_of_characters = AES.block_size - (len(text) % AES.block_size)
-    return text + number_of_characters * chr(number_of_characters)
 
 
 def setup_stub_aws_config():
