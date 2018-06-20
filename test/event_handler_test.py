@@ -3,7 +3,7 @@ import boto3
 import json
 import uuid
 import psycopg2
-from moto import mock_sqs, mock_s3
+from moto import mock_sqs, mock_s3, mock_kms
 from unittest import TestCase
 from datetime import datetime
 from Crypto.Cipher import AES
@@ -19,12 +19,13 @@ TIMESTAMP = '2018-02-10 12:07:32'
 SESSION_EVENT_TYPE = 'success'
 ENCRYPTION_KEY = b'sixteen byte key'
 
-
 @mock_sqs
 @mock_s3
+@mock_kms
 class EventHandlerTest(TestCase):
     __sqs_client = None
     __s3_client = None
+    __kms_client = None
     __queue_url = None
     __key_id = None
     db_connection = None
@@ -41,6 +42,7 @@ class EventHandlerTest(TestCase):
 
     def setUp(self):
         setup_stub_aws_config()
+        self.__setup_kms()
         self.__setup_db_connection()
         self.__setup_sqs()
         self.__setup_s3()
@@ -159,6 +161,14 @@ class EventHandlerTest(TestCase):
         self.__queue_url = queue['QueueUrl']
         os.environ['QUEUE_URL'] = self.__queue_url
 
+    def __setup_kms(self):
+        self.__kms_client = boto3.client('kms')
+        response = self.__kms_client.create_key(
+            KeyUsage='ENCRYPT_DECRYPT',
+            Origin='AWS_KMS',
+        )
+        self.__key_id = response['KeyMetadata']['KeyId']
+
     def __setup_s3(self):
         self.__s3_client = boto3.client('s3')
         self.__s3_client.create_bucket(
@@ -169,10 +179,15 @@ class EventHandlerTest(TestCase):
     def __write_encryption_key_to_s3(self):
         bucket_name = 'key-bucket'
         filename = 'encrypted-event-key.txt'
+        response = self.__kms_client.encrypt(
+            KeyId=self.__key_id,
+            Plaintext=ENCRYPTION_KEY,
+        )
+        encrypted_encryption_key = response['CiphertextBlob']
         self.__s3_client.put_object(
             Bucket=bucket_name,
             Key=filename,
-            Body=ENCRYPTION_KEY
+            Body=encrypted_encryption_key
         )
         os.environ['DECRYPTION_KEY_BUCKET_NAME'] = bucket_name
         os.environ['DECRYPTION_KEY_FILE_NAME'] = filename
