@@ -1,5 +1,6 @@
 import os
 import boto3
+import base64
 import json
 import uuid
 import psycopg2
@@ -183,7 +184,7 @@ class EventHandlerTest(TestCase):
             KeyId=self.__key_id,
             Plaintext=ENCRYPTION_KEY,
         )
-        encrypted_encryption_key = response['CiphertextBlob']
+        encrypted_encryption_key = base64.b64encode(response['CiphertextBlob'])
         self.__s3_client.put_object(
             Bucket=bucket_name,
             Key=filename,

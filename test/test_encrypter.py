@@ -20,4 +20,4 @@ def encrypt_string(plaintext, encryption_key):
     salt = str(uuid4())[:16]
     cipher = AES.new(encryption_key, AES.MODE_CBC, IV=salt)
     encrypted = cipher.encrypt(pad(plaintext, AES.block_size))
-    return salt + base64.b64encode(encrypted).decode('utf-8')
+    return base64.b64encode(bytes(salt, 'utf-8') + encrypted).decode('utf-8')
