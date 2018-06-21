@@ -4,13 +4,14 @@ from Crypto.Cipher import AES
 __SALT_LENGTH = 16
 
 
-def decrypt_message(encrypted_message, decryption_key):
+def decrypt_message(base64_encrypted_message, decryption_key):
     """
     encrypted_message expects a string in the format "<16 character plaintext salt><AES CBC encrypted message>"
     """
+    encrypted_message = base64.b64decode(base64_encrypted_message)
     salt = encrypted_message[:__SALT_LENGTH]
     cipher = AES.new(decryption_key, AES.MODE_CBC, IV=salt)
-    message = base64.b64decode(encrypted_message[__SALT_LENGTH:])
+    message = encrypted_message[__SALT_LENGTH:]
     return __pkcs5_unpad(cipher.decrypt(message).decode('utf-8'))
 
 
