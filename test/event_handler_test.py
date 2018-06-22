@@ -16,7 +16,7 @@ from src.database import RunInTransaction
 from test.test_encrypter import encrypt_string
 
 EVENT_TYPE = 'session_event'
-TIMESTAMP = '2018-02-10 12:07:32'
+TIMESTAMP = 1518264452000 # '2018-02-10 12:07:32'
 SESSION_EVENT_TYPE = 'success'
 ENCRYPTION_KEY = b'sixteen byte key'
 
@@ -148,7 +148,7 @@ class EventHandlerTest(TestCase):
             self.assertIsNotNone(matching_records)
             self.assertEqual(matching_records[0], event_id)
             self.assertEqual(matching_records[1], EVENT_TYPE)
-            self.assertEqual(matching_records[2], datetime.strptime(TIMESTAMP, '%Y-%m-%d %H:%M:%S'))
+            self.assertEqual(matching_records[2], datetime.fromtimestamp(TIMESTAMP / 1e3))
             self.assertEqual(matching_records[3], {'sessionEventType': SESSION_EVENT_TYPE})
 
     def __setup_db_connection(self):

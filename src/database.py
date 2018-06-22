@@ -1,6 +1,7 @@
 import json
 import psycopg2
 import os
+from datetime import datetime
 
 from psycopg2._psycopg import IntegrityError
 from psycopg2.errorcodes import UNIQUE_VIOLATION
@@ -34,7 +35,7 @@ def write_to_database(event, db_connection):
             """, [
                 event.event_id,
                 event.event_type,
-                event.timestamp,
+                datetime.fromtimestamp(int(event.timestamp) / 1e3),
                 json.dumps(event.details)
             ])
     except IntegrityError as integrityError:
