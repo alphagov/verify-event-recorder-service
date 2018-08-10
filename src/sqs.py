@@ -13,3 +13,11 @@ def delete_message(sqs_client, queue_url, message):
         QueueUrl=queue_url,
         ReceiptHandle=message['ReceiptHandle']
     )
+
+
+def send_message(sqs_client, queue_url, message):
+    response = sqs_client.send_message(
+        QueueUrl=queue_url,
+        MessageBody=message.body
+    )
+    return response if response else None
