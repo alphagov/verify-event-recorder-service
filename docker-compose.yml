@@ -1,0 +1,12 @@
+version: '3.4'
+
+services:
+  event-store:
+    image: postgres
+    volumes:
+      - ./database-schema/:/docker-entrypoint-initdb.d/:ro
+
+  tests:
+    build: .
+    depends_on:
+      - event-store

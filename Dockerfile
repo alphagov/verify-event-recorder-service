@@ -1,10 +1,11 @@
-FROM python:latest
+FROM python:3.6
 
-RUN apt-get update && apt-get install -y postgresql postgresql-contrib sudo unzip
+WORKDIR /install
+COPY requirements/ requirements/
+RUN python3 -m pip install -r requirements/dev.txt
 
-COPY build/docker-entry.sh /usr/local/bin/
-COPY requirements/*.txt /usr/local/bin/requirements/
+COPY src src
+COPY test test
 
-RUN ./usr/local/bin/docker-entry.sh
-
-CMD service postgresql start && python3
+ENTRYPOINT ["python3"]
+CMD ["-m", "unittest", "discover", "test/", "*_test.py"]

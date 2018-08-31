@@ -2,28 +2,14 @@ pipeline {
   agent none
 
   stages {
-    stage('Create Docker Image') {
-      agent {
-        dockerfile {
-          additionalBuildArgs '--tag event-recorder-image'
-          reuseNode true
-        }
-      }
+    stage('Run Tests') {
       steps {
-        sh 'echo "Built Docker Container"'
+        sh './build/run-tests.sh'
       }
     }
-    stage('Run Tests') {
-      agent {
-        docker {
-          image 'event-recorder-image'
-          args '-u root:sudo'
-          reuseNode true
-        }
-      }
+    stage('Package') {
       steps {
-        sh 'service postgresql start'
-        sh './build/run-tests.sh'
+        sh './build/package.sh'
       }
     }
   }
