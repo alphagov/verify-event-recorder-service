@@ -1,39 +1,10 @@
 #!/usr/bin/env bash
 set -eu
+cd "$(dirname "$0")/../"
 
-ARCHIVE_NAME=verify-event-recorder-service.zip
-
-if [ -d tmp/ ];
-then
-    rm -r tmp/
-fi
-
-if [ -f ${ARCHIVE_NAME} ];
-then
-    rm -f ${ARCHIVE_NAME}
-fi
-
-if [ -z "$(which virtualenv)" ];
-then
-    pip3 install virtualenv
-fi
-
-virtualenv --python=python3 package-env
-package-env/bin/pip install -r requirements/prod.txt
-
-mkdir -p tmp/src/
-cp -r package-env/lib/python3.6/site-packages/** tmp/.
-cp -r src/** tmp/src/.
-
-find tmp/ -type f -name '*.so' -delete
-cp -r build/linux-binaries/** tmp/.
-
-echo "Zipping verify-event-recorder-service"
-cd tmp
-zip -qr ${ARCHIVE_NAME} .
-mv ${ARCHIVE_NAME} ../
-cd ..
-echo "Zipping complete"
-
-echo "Cleaning up temporary files"
-rm -r tmp/
+TAG=event-recorder:package
+NAME=event-recorder
+docker build . -f package.Dockerfile -t $TAG
+docker run --name $NAME $TAG
+docker cp $(docker ps -a -q -f name="$NAME" | head -1):/package/verify-event-recorder-service.zip verify-event-recorder-service.zip
+docker rm $NAME
