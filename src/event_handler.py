@@ -11,12 +11,15 @@ from src.kms import decrypt
 
 logging.basicConfig(level=logging.INFO)
 
-
 # noinspection PyUnusedLocal
 def store_queued_events(_, __):
     sqs_client = boto3.client('sqs')
     queue_url = os.environ['QUEUE_URL']
-    encrypted_decryption_key = fetch_decryption_key()
+
+    if 'ENCRYPTION_KEY' in os.environ:
+      encrypted_decryption_key = os.environ['ENCRYPTION_KEY']
+    else:
+      encrypted_decryption_key = fetch_decryption_key()
     decryption_key = decrypt(encrypted_decryption_key)
 
     database_password = None

@@ -46,12 +46,27 @@ class EventHandlerTest(TestCase):
         self.__setup_kms()
         self.__setup_db_connection_string()
         self.__setup_sqs()
-        self.__setup_s3()
 
     def tearDown(self):
         self.__clean_db()
 
-    def test_reads_messages_from_queue(self):
+    def test_reads_messages_from_queue_with_key_from_s3(self):
+        self.__setup_s3()
+        self.__encrypt_and_send_to_sqs(
+            [
+                create_event_string('sample-id-1'),
+                create_event_string('sample-id-2'),
+            ]
+        )
+
+        event_handler.store_queued_events(None, None)
+
+        self.__assert_database_has_records(['sample-id-1', 'sample-id-2'])
+        self.assertEqual(self.__number_of_visible_messages(), '0')
+        self.assertEqual(self.__number_of_hidden_messages(), '0')
+
+    def test_reads_messages_from_queue_with_key_from_env(self):
+        os.environ['ENCRYPTION_KEY'] = self.__encrypt(ENCRYPTION_KEY)
         self.__encrypt_and_send_to_sqs(
             [
                 create_event_string('sample-id-1'),
@@ -66,6 +81,7 @@ class EventHandlerTest(TestCase):
         self.assertEqual(self.__number_of_hidden_messages(), '0')
 
     def test_writes_messages_to_db_with_password_from_env(self):
+        self.__setup_s3()
         self.__setup_db_connection_string(True)
         self.__encrypt_and_send_to_sqs(
             [
@@ -79,6 +95,7 @@ class EventHandlerTest(TestCase):
         self.__assert_database_has_records(['sample-id-1', 'sample-id-2'])
 
     def test_does_not_delete_invalid_messages(self):
+        self.__setup_s3()
         with LogCapture('event-recorder', propagate=False) as log_capture:
             self.__encrypt_and_send_to_sqs(
                 [
@@ -101,6 +118,7 @@ class EventHandlerTest(TestCase):
             self.assertEqual(self.__number_of_hidden_messages(), '1')
 
     def test_records_error_but_does_delete_messages_for_duplicate_events(self):
+        self.__setup_s3()
         with LogCapture('event-recorder', propagate=False) as log_capture:
             self.__encrypt_and_send_to_sqs(
                 [
@@ -199,6 +217,7 @@ class EventHandlerTest(TestCase):
             KeyId=self.__key_id,
             Plaintext=content,
         )
+        # The boto3 client provides CiphertextBlob as binary, the CLI uses base64
         return base64.b64encode(response['CiphertextBlob'])
 
     def __write_encryption_key_to_s3(self):
