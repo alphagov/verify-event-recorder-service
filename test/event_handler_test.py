@@ -7,7 +7,6 @@ import psycopg2
 from moto import mock_sqs, mock_s3, mock_kms
 from unittest import TestCase
 from datetime import datetime
-from Crypto.Cipher import AES
 from testfixtures import LogCapture
 from retrying import retry
 
