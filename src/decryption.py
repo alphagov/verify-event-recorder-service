@@ -1,5 +1,6 @@
 import base64
-from Crypto.Cipher import AES
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
 
 __SALT_LENGTH = 16
 
@@ -10,9 +11,11 @@ def decrypt_message(base64_encrypted_message, decryption_key):
     """
     encrypted_message = base64.b64decode(base64_encrypted_message)
     salt = encrypted_message[:__SALT_LENGTH]
-    cipher = AES.new(decryption_key, AES.MODE_CBC, IV=salt)
+    cipher = Cipher(algorithms.AES(decryption_key), modes.CBC(salt), default_backend())
+    decrypter = cipher.decryptor()
     message = encrypted_message[__SALT_LENGTH:]
-    return __pkcs5_unpad(cipher.decrypt(message).decode('utf-8'))
+    decrypted_message = decrypter.update(message) + decrypter.finalize()
+    return __pkcs5_unpad(decrypted_message.decode('utf-8'))
 
 
 def __pkcs5_unpad(message):

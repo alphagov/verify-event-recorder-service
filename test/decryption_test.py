@@ -4,7 +4,7 @@ from test.test_encrypter import encrypt_string
 
 
 class EventHandlerTest(TestCase):
-    __key = 'sixteen byte key'
+    __key = b'sixteen byte key'
 
     def test_decrypts_message_with_full_final_block_padding(self):
         sixteen_char_message = '{ abcdefghijkl }'
