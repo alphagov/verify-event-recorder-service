@@ -9,8 +9,9 @@ if ! command -v pre-commit 2>/dev/null; then
   echo "   pre-commit install --hook-type pre-push"
 else
   if [ ! -f .git/hooks/pre-push ]; then
-    pre-commit install --hook-type pre-push
+    pre-commit install --hook-type pre-commit
   fi
 fi
 
-make pre-commit
+./build/run-tests.sh
+./build/package.sh

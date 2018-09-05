@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
-set -eu
 
-python3 -m unittest discover test/ "*_test.py"
+docker-compose build
+docker-compose run --rm tests
+exit_code=$?
+docker-compose down
+exit $exit_code

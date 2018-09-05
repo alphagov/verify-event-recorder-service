@@ -37,6 +37,7 @@ advantages of the serverless pattern we were aiming for with Lambda.
 3) Always run our package step on a machine which matches the Lambda server.
 4) Obtain the correct binaries, and swap them in during our package step.
 5) Use `pip download` targeting a particular platform
+6) Use Docker to package binaries on a specific platform
 
 ### Analysis
 1) Sadly there aren't well maintained, active alternatives for us. The libraries
@@ -69,13 +70,13 @@ correct binary files for the Lambda.
 targeted for a particular platform. Its a nice idea, but sadly there is a bug
 in the current version on pip which makes this impossible.
 
+6) This is fairly easy as all developers and our CI server already have Docker
+installed and we can easily change what platform we target by using a different
+base image.
+
 ## Decision
-In the end we went with 4) in order to get things up and running.
-The required binaries are committed to source control, allowing us to document
-our solution, and run the package command from anywhere.
+We will use 6) as we are using Docker for testing anyway and it gives us the
+flexibility to change what we target easily.
 
 ## Consequences
-In the future if we have more work with python Lambdas we may wish to invest
-more time into setting up a shared and more robust packaging pipeline.
-
 The current solution allows us to package our application easily from any machine.

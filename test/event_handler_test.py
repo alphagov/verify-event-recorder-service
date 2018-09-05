@@ -30,7 +30,7 @@ class EventHandlerTest(TestCase):
     __queue_url = None
     __key_id = None
     db_connection = None
-    db_connection_string = "host='localhost' dbname='postgres' user='postgres' password='secretPassword'"
+    db_connection_string = "host='event-store' dbname='postgres' user='postgres' password='secretPassword'"
 
     @classmethod
     def setUpClass(cls):
