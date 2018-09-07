@@ -8,7 +8,9 @@ from psycopg2.errorcodes import UNIQUE_VIOLATION
 from logging import getLogger
 
 
-def create_db_connection():
+def create_db_connection(database_password):
+    if database_password:
+      return psycopg2.connect(os.environ['DB_CONNECTION_STRING'], password=database_password)
     return psycopg2.connect(os.environ['DB_CONNECTION_STRING'])
 
 

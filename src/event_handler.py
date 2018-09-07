@@ -16,9 +16,13 @@ logging.basicConfig(level=logging.INFO)
 def store_queued_events(_, __):
     sqs_client = boto3.client('sqs')
     queue_url = os.environ['QUEUE_URL']
-    db_connection = create_db_connection()
     encrypted_decryption_key = fetch_decryption_key()
     decryption_key = decrypt(encrypted_decryption_key)
+
+    database_password = None
+    if 'ENCRYPTED_DATABASE_PASSWORD' in os.environ:
+      database_password = decrypt(os.environ['ENCRYPTED_DATABASE_PASSWORD'])
+    db_connection = create_db_connection(database_password)
 
     while True:
         message = fetch_single_message(sqs_client, queue_url)

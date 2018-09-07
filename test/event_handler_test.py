@@ -18,6 +18,7 @@ EVENT_TYPE = 'session_event'
 TIMESTAMP = 1518264452000 # '2018-02-10 12:07:32'
 SESSION_EVENT_TYPE = 'success'
 ENCRYPTION_KEY = b'sixteen byte key'
+DB_PASSWORD = 'secretPassword'
 
 @mock_sqs
 @mock_s3
@@ -29,7 +30,7 @@ class EventHandlerTest(TestCase):
     __queue_url = None
     __key_id = None
     db_connection = None
-    db_connection_string = "host='event-store' dbname='postgres' user='postgres' password='secretPassword'"
+    db_connection_string = "host='event-store' dbname='postgres' user='postgres'"
 
     @classmethod
     def setUpClass(cls):
@@ -43,7 +44,7 @@ class EventHandlerTest(TestCase):
     def setUp(self):
         setup_stub_aws_config()
         self.__setup_kms()
-        self.__setup_db_connection()
+        self.__setup_db_connection_string()
         self.__setup_sqs()
         self.__setup_s3()
 
@@ -63,6 +64,19 @@ class EventHandlerTest(TestCase):
         self.__assert_database_has_records(['sample-id-1', 'sample-id-2'])
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
+
+    def test_writes_messages_to_db_with_password_from_env(self):
+        self.__setup_db_connection_string(True)
+        self.__encrypt_and_send_to_sqs(
+            [
+                create_event_string('sample-id-1'),
+                create_event_string('sample-id-2'),
+            ]
+        )
+
+        event_handler.store_queued_events(None, None)
+
+        self.__assert_database_has_records(['sample-id-1', 'sample-id-2'])
 
     def test_does_not_delete_invalid_messages(self):
         with LogCapture('event-recorder', propagate=False) as log_capture:
@@ -150,8 +164,12 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[2], datetime.fromtimestamp(TIMESTAMP / 1e3))
             self.assertEqual(matching_records[3], {'sessionEventType': SESSION_EVENT_TYPE})
 
-    def __setup_db_connection(self):
-        os.environ['DB_CONNECTION_STRING'] = self.db_connection_string
+    def __setup_db_connection_string(self, password_in_env=False):
+        if password_in_env:
+          os.environ['DB_CONNECTION_STRING'] = self.db_connection_string
+          os.environ['ENCRYPTED_DATABASE_PASSWORD'] = self.__encrypt(DB_PASSWORD)
+        else:
+          os.environ['DB_CONNECTION_STRING'] = "{} password='{}'".format(self.db_connection_string, DB_PASSWORD)
 
     def __setup_sqs(self):
         self.__sqs_client = boto3.client('sqs')
@@ -176,14 +194,17 @@ class EventHandlerTest(TestCase):
         )
         self.__write_encryption_key_to_s3()
 
+    def __encrypt(self, content):
+        response = self.__kms_client.encrypt(
+            KeyId=self.__key_id,
+            Plaintext=content,
+        )
+        return base64.b64encode(response['CiphertextBlob'])
+
     def __write_encryption_key_to_s3(self):
         bucket_name = 'key-bucket'
         filename = 'encrypted-event-key.txt'
-        response = self.__kms_client.encrypt(
-            KeyId=self.__key_id,
-            Plaintext=ENCRYPTION_KEY,
-        )
-        encrypted_encryption_key = base64.b64encode(response['CiphertextBlob'])
+        encrypted_encryption_key = self.__encrypt(ENCRYPTION_KEY)
         self.__s3_client.put_object(
             Bucket=bucket_name,
             Key=filename,
