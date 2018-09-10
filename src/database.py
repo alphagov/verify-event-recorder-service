@@ -26,18 +26,20 @@ class RunInTransaction:
         self.__connection.commit()
 
 
-def write_to_database(event, db_connection):
+def write_to_audit_database(event, db_connection):
     try:
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""
-                INSERT INTO events
-                (event_id, event_type, timestamp, details)
+                INSERT INTO audit.audit_events
+                (event_id, event_type, time_stamp, originating_service, session_id, details)
                 VALUES
-                (%s, %s, %s, %s);
+                (%s, %s, %s, %s, %s, %s);
             """, [
                 event.event_id,
                 event.event_type,
                 datetime.fromtimestamp(int(event.timestamp) / 1e3),
+                event.originating_service,
+                event.session_id,
                 json.dumps(event.details)
             ])
     except IntegrityError as integrityError:
