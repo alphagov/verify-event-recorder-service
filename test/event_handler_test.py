@@ -17,6 +17,8 @@ from test.test_encrypter import encrypt_string
 EVENT_TYPE = 'session_event'
 TIMESTAMP = 1518264452000 # '2018-02-10 12:07:32'
 SESSION_EVENT_TYPE = 'success'
+ORIGINATING_SERVICE = 'test service'
+SESSION_ID = 'test session id'
 ENCRYPTION_KEY = b'sixteen byte key'
 DB_PASSWORD = 'secretPassword'
 
@@ -165,14 +167,24 @@ class EventHandlerTest(TestCase):
     def __clean_db(self):
         with RunInTransaction(self.db_connection) as cursor:
             cursor.execute("""
-                DELETE FROM events;
+                DELETE FROM audit.audit_events;
             """)
 
     def __assert_database_has_records(self, expected_event_ids):
         for event_id in expected_event_ids:
             with RunInTransaction(self.db_connection) as cursor:
                 cursor.execute("""
-                    SELECT * FROM events WHERE event_id = %s;
+                    SELECT
+                        event_id,
+                        event_type,
+                        time_stamp,
+                        originating_service,
+                        session_id,
+                        details
+                    FROM
+                        audit.audit_events
+                    WHERE
+                        event_id = %s;
                 """, [event_id])
                 matching_records = cursor.fetchone()
 
@@ -180,7 +192,9 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[0], event_id)
             self.assertEqual(matching_records[1], EVENT_TYPE)
             self.assertEqual(matching_records[2], datetime.fromtimestamp(TIMESTAMP / 1e3))
-            self.assertEqual(matching_records[3], {'sessionEventType': SESSION_EVENT_TYPE})
+            self.assertEqual(matching_records[3], ORIGINATING_SERVICE)
+            self.assertEqual(matching_records[4], SESSION_ID)
+            self.assertEqual(matching_records[5], {'sessionEventType': SESSION_EVENT_TYPE})
 
     def __setup_db_connection_string(self, password_in_env=False):
         if password_in_env:
@@ -244,6 +258,8 @@ def create_event_string(event_id):
         'eventId': event_id,
         'eventType': EVENT_TYPE,
         'timestamp': TIMESTAMP,
+        'originatingService': ORIGINATING_SERVICE,
+        'sessionId': SESSION_ID,
         'details': {
             'sessionEventType': SESSION_EVENT_TYPE
         }
