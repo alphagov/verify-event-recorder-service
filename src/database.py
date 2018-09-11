@@ -26,7 +26,7 @@ class RunInTransaction:
         self.__connection.commit()
 
 
-def write_to_audit_database(event, db_connection):
+def write_audit_event_to_audit_database(event, db_connection):
     try:
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""
@@ -46,6 +46,49 @@ def write_to_audit_database(event, db_connection):
         if integrityError.pgcode == UNIQUE_VIOLATION:
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
-            getLogger('event-recorder').warning('Failed to store message. The Event ID {0} already exists in the database'.format(event.event_id))
+            getLogger('event-recorder').warning('Failed to store an audit event. The Event ID {0} already exists in the database'.format(event.event_id))
         else:
             raise integrityError
+
+def write_billing_event_to_billing_database(event, db_connection):
+    try:
+        with RunInTransaction(db_connection) as cursor:
+            cursor.execute("""
+                INSERT INTO billing.billing_events
+                (time_stamp, session_id, hashed_persistent_id, request_id, idp_entity_id, minimum_level_of_assurance, required_level_of_assurance, provided_level_of_assurance)
+                VALUES
+                (%s, %s, %s, %s, %s, %s, %s, %s);
+            """, [
+                datetime.fromtimestamp(int(event.timestamp) / 1e3),
+                event.session_id,
+                event.details['pid'],
+                event.details['request_id'],
+                event.details['idp_entity_id'],
+                event.details['minimum_level_of_assurance'],
+                event.details['required_level_of_assurance'],
+                event.details['provided_level_of_assurance']
+            ])
+    except IntegrityError as integrityError:
+        getLogger('event-recorder').warning('Failed to store a billing event [Event ID {0}]'.format(event.event_id))
+        raise integrityError
+
+def write_fraud_event_to_billing_database(event, db_connection):
+    try:
+        with RunInTransaction(db_connection) as cursor:
+            cursor.execute("""
+                INSERT INTO billing.fraud_events
+                (time_stamp, session_id, hashed_persistent_id, request_id, entity_id, fraud_event_id, fraud_indicator)
+                VALUES
+                (%s, %s, %s, %s, %s, %s, %s);
+            """, [
+                datetime.fromtimestamp(int(event.timestamp) / 1e3),
+                event.session_id,
+                event.details['pid'],
+                event.details['request_id'],
+                event.details['idp_entity_id'],
+                event.details['idp_fraud_event_id'],
+                event.details['gpg45_status']
+            ])
+    except IntegrityError as integrityError:
+        getLogger('event-recorder').warning('Failed to store a fraud event [Event ID {0}]'.format(event.event_id))
+        raise integrityError
