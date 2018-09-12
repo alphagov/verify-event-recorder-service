@@ -68,8 +68,11 @@ def write_billing_event_to_billing_database(event, db_connection):
                 event.details['required_level_of_assurance'],
                 event.details['provided_level_of_assurance']
             ])
+    except KeyError as keyError:
+        getLogger('event-recorder').warning('Failed to store a billing event [Event ID {0}] due to key error'.format(event.event_id))
+        raise keyError
     except IntegrityError as integrityError:
-        getLogger('event-recorder').warning('Failed to store a billing event [Event ID {0}]'.format(event.event_id))
+        getLogger('event-recorder').warning('Failed to store a billing event [Event ID {0}] due to integrity error'.format(event.event_id))
         raise integrityError
 
 def write_fraud_event_to_billing_database(event, db_connection):
@@ -89,6 +92,9 @@ def write_fraud_event_to_billing_database(event, db_connection):
                 event.details['idp_fraud_event_id'],
                 event.details['gpg45_status']
             ])
+    except KeyError as keyError:
+        getLogger('event-recorder').warning('Failed to store a fraud event [Event ID {0}] due to key error'.format(event.event_id))
+        raise keyError
     except IntegrityError as integrityError:
-        getLogger('event-recorder').warning('Failed to store a fraud event [Event ID {0}]'.format(event.event_id))
+        getLogger('event-recorder').warning('Failed to store a fraud event [Event ID {0}] due to integrity error'.format(event.event_id))
         raise integrityError

@@ -2,11 +2,11 @@ CREATE SCHEMA audit AUTHORIZATION postgres;
 
 CREATE TABLE audit.audit_events
 (
-    event_id             text COLLATE pg_catalog."default",
-    time_stamp           timestamp,
-    originating_service  text COLLATE pg_catalog."default",
+    event_id             text COLLATE pg_catalog."default" NOT NULL,
+    time_stamp           timestamp                         NOT NULL,
+    originating_service  text COLLATE pg_catalog."default" NOT NULL,
     session_id           text COLLATE pg_catalog."default",
-    event_type           text COLLATE pg_catalog."default",
+    event_type           text COLLATE pg_catalog."default" NOT NULL,
     details              jsonb,
     PRIMARY KEY (event_id, time_stamp)
 )
