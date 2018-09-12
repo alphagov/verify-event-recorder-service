@@ -24,7 +24,8 @@ def store_queued_events(_, __):
 
     database_password = None
     if 'ENCRYPTED_DATABASE_PASSWORD' in os.environ:
-      database_password = decrypt(os.environ['ENCRYPTED_DATABASE_PASSWORD'])
+      # boto returns decrypted as b'bytes' so decode to convert to password string
+      database_password = decrypt(os.environ['ENCRYPTED_DATABASE_PASSWORD']).decode()
     db_connection = create_db_connection(database_password)
 
     while True:
