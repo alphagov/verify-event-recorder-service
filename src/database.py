@@ -26,7 +26,7 @@ class RunInTransaction:
         self.__connection.commit()
 
 
-def write_audit_event_to_audit_database(event, db_connection):
+def write_audit_event_to_database(event, db_connection):
     try:
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""
@@ -50,7 +50,7 @@ def write_audit_event_to_audit_database(event, db_connection):
         else:
             raise integrityError
 
-def write_billing_event_to_billing_database(event, db_connection):
+def write_billing_event_to_database(event, db_connection):
     try:
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""
@@ -75,7 +75,7 @@ def write_billing_event_to_billing_database(event, db_connection):
         getLogger('event-recorder').warning('Failed to store a billing event [Event ID {0}] due to integrity error'.format(event.event_id))
         raise integrityError
 
-def write_fraud_event_to_billing_database(event, db_connection):
+def write_fraud_event_to_database(event, db_connection):
     try:
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""

@@ -13,6 +13,9 @@ CREATE TABLE billing.billing_events
 )
 TABLESPACE pg_default;
 ALTER TABLE billing.billing_events OWNER to postgres;
+CREATE INDEX ON billing.billing_events (time_stamp);
+CREATE INDEX ON billing.billing_events (hashed_persistent_id);
+CREATE INDEX ON billing.billing_events (provided_level_of_assurance);
 
 CREATE TABLE billing.fraud_events
 (
@@ -26,3 +29,5 @@ CREATE TABLE billing.fraud_events
 )
 TABLESPACE pg_default;
 ALTER TABLE billing.fraud_events OWNER to postgres;
+CREATE INDEX ON billing.fraud_events (time_stamp);
+CREATE INDEX ON billing.fraud_events (hashed_persistent_id);

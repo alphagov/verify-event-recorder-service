@@ -74,10 +74,10 @@ class EventHandlerTest(TestCase):
 
         event_handler.store_queued_events(None, None)
 
-        self.__assert_audit_database_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
-        self.__assert_audit_database_has_fraud_event_records([('sample-id-3', 'session-id-3', 'fraud-event-id-1'), ('sample-id-4', 'session-id-4', 'fraud-event-id-2')])
-        self.__assert_billing_database_has_billing_event_records(['session-id-1', 'session-id-2'])
-        self.__assert_billing_database_has_fraud_event_records([('session-id-3', 'fraud-event-id-1'), ('session-id-4', 'fraud-event-id-2')])
+        self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+        self.__assert_audit_events_table_has_fraud_event_records([('sample-id-3', 'session-id-3', 'fraud-event-id-1'), ('sample-id-4', 'session-id-4', 'fraud-event-id-2')])
+        self.__assert_billing_events_table_has_billing_event_records(['session-id-1', 'session-id-2'])
+        self.__assert_fraud_events_table_has_fraud_event_records([('session-id-3', 'fraud-event-id-1'), ('session-id-4', 'fraud-event-id-2')])
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
 
@@ -92,9 +92,9 @@ class EventHandlerTest(TestCase):
 
         event_handler.store_queued_events(None, None)
 
-        self.__assert_audit_database_has_fraud_event_records([('sample-id-1', 'session-id-1', 'fraud-event-id-1'), ('sample-id-2', 'session-id-2', 'fraud-event-id-2')])
-        self.__assert_database_has_no_billing_event_records
-        self.__assert_billing_database_has_fraud_event_records([('session-id-1', 'fraud-event-id-1'), ('session-id-2', 'fraud-event-id-2')])
+        self.__assert_audit_events_table_has_fraud_event_records([('sample-id-1', 'session-id-1', 'fraud-event-id-1'), ('sample-id-2', 'session-id-2', 'fraud-event-id-2')])
+        self.__assert_billing_events_table_has_no_billing_event_records
+        self.__assert_fraud_events_table_has_fraud_event_records([('session-id-1', 'fraud-event-id-1'), ('session-id-2', 'fraud-event-id-2')])
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
 
@@ -109,7 +109,9 @@ class EventHandlerTest(TestCase):
 
         event_handler.store_queued_events(None, None)
 
-        self.__assert_audit_database_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+        self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+        self.__assert_billing_events_table_has_billing_event_records(['session-id-1', 'session-id-2'])
+        self.__assert_fraud_events_table_has_no_fraud_event_records
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
 
@@ -125,9 +127,10 @@ class EventHandlerTest(TestCase):
 
         event_handler.store_queued_events(None, None)
 
-        self.__assert_audit_database_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+        self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+        self.__assert_billing_events_table_has_billing_event_records(['session-id-1', 'session-id-2'])
 
-    def test_does_not_write_incomplete_billing_event_message_to_billing_database_but_writes_to_audit_database(self):
+    def test_writes_incomplete_billing_event_to_audit_events_table_but_not_to_billing_events_table(self):
         self.__setup_s3()
         with LogCapture('event-recorder', propagate=False) as log_capture:
             self.__encrypt_and_send_to_sqs(
@@ -138,9 +141,9 @@ class EventHandlerTest(TestCase):
 
             event_handler.store_queued_events(None, None)
 
-            self.__assert_audit_database_has_billing_event_records([('sample-id-1', 'session-id-1')], None)
-            self.__assert_database_has_no_billing_event_records
-            self.__assert_database_has_no_fraud_event_records
+            self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1')], None)
+            self.__assert_billing_events_table_has_no_billing_event_records
+            self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
                 (
                     'event-recorder',
@@ -156,7 +159,7 @@ class EventHandlerTest(TestCase):
             self.assertEqual(self.__number_of_visible_messages(), '0')
             self.assertEqual(self.__number_of_hidden_messages(), '1')
 
-    def test_does_not_write_incomplete_fraud_event_message_to_billing_database_but_writes_to_audit_database(self):
+    def test_writes_incomplete_fraud_event_to_audit_events_table_but_not_to_fraud_events_table(self):
         self.__setup_s3()
         with LogCapture('event-recorder', propagate=False) as log_capture:
             self.__encrypt_and_send_to_sqs(
@@ -167,8 +170,9 @@ class EventHandlerTest(TestCase):
 
             event_handler.store_queued_events(None, None)
 
-            self.__assert_audit_database_has_fraud_event_records([('sample-id-1', 'session-id-1', None)])
-            self.__assert_database_has_no_fraud_event_records
+            self.__assert_audit_events_table_has_fraud_event_records([('sample-id-1', 'session-id-1', None)])
+            self.__assert_billing_events_table_has_no_billing_event_records
+            self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
                 (
                     'event-recorder',
@@ -196,9 +200,9 @@ class EventHandlerTest(TestCase):
 
             event_handler.store_queued_events(None, None)
 
-            self.__assert_audit_database_has_billing_event_records([('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
-            self.__assert_billing_database_has_billing_event_records(['session-id-2'])
-            self.__assert_database_has_no_fraud_event_records
+            self.__assert_audit_events_table_has_billing_event_records([('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+            self.__assert_billing_events_table_has_billing_event_records(['session-id-2'])
+            self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
                 (
                     'event-recorder',
@@ -221,9 +225,9 @@ class EventHandlerTest(TestCase):
 
             event_handler.store_queued_events(None, None)
 
-            self.__assert_audit_database_has_billing_event_records([('sample-id-1', 'session-id-1')], MINIMUM_LEVEL_OF_ASSURANCE)
-            self.__assert_billing_database_has_billing_event_records(['session-id-1'])
-            self.__assert_database_has_no_fraud_event_records
+            self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1')], MINIMUM_LEVEL_OF_ASSURANCE)
+            self.__assert_billing_events_table_has_billing_event_records(['session-id-1'])
+            self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
                 (
                     'event-recorder',
@@ -264,7 +268,7 @@ class EventHandlerTest(TestCase):
                 DELETE FROM billing.fraud_events;
             """)
 
-    def __assert_audit_database_has_billing_event_records(self, expected_events, minimum_level_of_assurance):
+    def __assert_audit_events_table_has_billing_event_records(self, expected_events, minimum_level_of_assurance):
         for event in expected_events:
             with RunInTransaction(self.db_connection) as cursor:
                 cursor.execute("""
@@ -304,7 +308,7 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[11], PROVIDED_LEVEL_OF_ASSURANCE)
             self.assertEqual(matching_records[12], REQUIRED_LEVEL_OF_ASSURANCE)
 
-    def __assert_audit_database_has_fraud_event_records(self, expected_events):
+    def __assert_audit_events_table_has_fraud_event_records(self, expected_events):
         for event in expected_events:
             with RunInTransaction(self.db_connection) as cursor:
                 cursor.execute("""
@@ -340,7 +344,7 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[9], event[2])
             self.assertEqual(matching_records[10], GPG45_STATUS)
 
-    def __assert_database_has_no_billing_event_records(self):
+    def __assert_billing_events_table_has_no_billing_event_records(self):
         with RunInTransaction(self.db_connection) as cursor:
             cursor.execute("""
                 SELECT
@@ -352,7 +356,7 @@ class EventHandlerTest(TestCase):
 
         self.assertIsNone(matching_records)
 
-    def __assert_billing_database_has_billing_event_records(self, expected_session_ids):
+    def __assert_billing_events_table_has_billing_event_records(self, expected_session_ids):
         for session_id in expected_session_ids:
             with RunInTransaction(self.db_connection) as cursor:
                 cursor.execute("""
@@ -382,7 +386,7 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[6], PROVIDED_LEVEL_OF_ASSURANCE)
             self.assertEqual(matching_records[7], REQUIRED_LEVEL_OF_ASSURANCE)
 
-    def __assert_database_has_no_fraud_event_records(self):
+    def __assert_fraud_events_table_has_no_fraud_event_records(self):
         with RunInTransaction(self.db_connection) as cursor:
             cursor.execute("""
                 SELECT
@@ -394,7 +398,7 @@ class EventHandlerTest(TestCase):
 
         self.assertIsNone(matching_records)
 
-    def __assert_billing_database_has_fraud_event_records(self, expected_fraud_events):
+    def __assert_fraud_events_table_has_fraud_event_records(self, expected_fraud_events):
         for fraud_event in expected_fraud_events:
             with RunInTransaction(self.db_connection) as cursor:
                 cursor.execute("""

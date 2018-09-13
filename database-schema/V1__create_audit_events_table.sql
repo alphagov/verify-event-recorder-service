@@ -12,4 +12,4 @@ CREATE TABLE audit.audit_events
 )
 TABLESPACE pg_default;
 ALTER TABLE audit.audit_events OWNER to postgres;
-
+CREATE INDEX ON audit.audit_events (time_stamp);

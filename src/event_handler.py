@@ -3,8 +3,8 @@ import os
 
 import boto3
 
-from src.database import create_db_connection, write_audit_event_to_audit_database, \
-    write_billing_event_to_billing_database, write_fraud_event_to_billing_database
+from src.database import create_db_connection, write_audit_event_to_database, \
+    write_billing_event_to_database, write_fraud_event_to_database
 from src.decryption import decrypt_message
 from src.event_mapper import event_from_json
 from src.kms import decrypt
@@ -39,11 +39,11 @@ def store_queued_events(_, __):
         try:
             decrypted_message = decrypt_message(message['Body'], decryption_key)
             event = event_from_json(decrypted_message)
-            write_audit_event_to_audit_database(event, db_connection)
-            if event.event_type == 'session_event' and 'session_event_type' in event.details and event.details['session_event_type'] == 'idp_authn_succeeded':
-                write_billing_event_to_billing_database(event, db_connection)
-            if event.event_type == 'session_event' and 'session_event_type' in event.details and event.details['session_event_type'] == 'fraud_detected':
-                write_fraud_event_to_billing_database(event, db_connection)
+            write_audit_event_to_database(event, db_connection)
+            if event.event_type == 'session_event' and event.details.get('session_event_type') == 'idp_authn_succeeded':
+                write_billing_event_to_database(event, db_connection)
+            if event.event_type == 'session_event' and event.details.get('session_event_type') == 'fraud_detected':
+                write_fraud_event_to_database(event, db_connection)
             delete_message(sqs_client, queue_url, message)
         except Exception as exception:
             logging.getLogger('event-recorder').exception('Failed to store message')
