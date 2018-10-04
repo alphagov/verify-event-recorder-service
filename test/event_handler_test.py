@@ -16,7 +16,6 @@ from test.test_encrypter import encrypt_string
 
 EVENT_TYPE = 'session_event'
 TIMESTAMP = 1518264452000 # '2018-02-10 12:07:32'
-SESSION_EVENT_TYPE = 'success'
 ORIGINATING_SERVICE = 'test service'
 ENCRYPTION_KEY = b'sixteen byte key'
 DB_PASSWORD = 'secretPassword'
