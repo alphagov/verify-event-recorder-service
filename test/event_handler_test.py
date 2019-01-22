@@ -479,6 +479,8 @@ class EventHandlerTest(TestCase):
 def setup_stub_aws_config():
     os.environ = {
         'AWS_DEFAULT_REGION': 'eu-west-2',
+        'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
+        'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY'
     }
 
 

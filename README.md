@@ -42,3 +42,22 @@ Therefore binaries built on our dev machines will not work on Lambda.
 
 As a workaround, we have created all the required binaries on a linux VM, and have added them to source control. Our 
 package task will use these binaries in preference to any which are created on the host system.
+
+## Replaying Events from ida-hub-support database
+
+To replay events from the ida-hub-support MongoDB instance to the event recorder, you must first export the events from the relevant Mongo instance by ssh'ing into the database box and running the following commands:
+
+```bash
+password=$(sudo /usr/share/ida-webops/bin/verify-puppet lookup --render-as s profiles::ida_mongo_users::readonlypassword)
+mongoexport \
+	-u readonly \
+	-p $password \
+	-d auditDb \
+	-c auditEvents \
+	-q '{ "document.timestamp":{ "$gte": "2019-01-18T06:35:00.000Z", "$lte": "2019-01-18T08:11:00.000Z" }}' \
+	--out export.json
+```
+
+You should then download this file, over a secure connection, and upload to the S3 bucket configured as the trigger
+for the import_handler Lambda.
+ 
