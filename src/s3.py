@@ -13,3 +13,7 @@ def fetch_import_file(bucket_name, filename):
     s3_client = boto3.client('s3')
     response = s3_client.get_object(Bucket=bucket_name, Key=filename)
     return response['Body'].iter_lines()
+
+def delete_import_file(bucket_name, filename):
+    s3_client = boto3.client('s3')
+    s3_client.delete_object(Bucket=bucket_name, Key=filename)

@@ -1,19 +1,17 @@
 import logging
 import os
 import json
-import boto3
-import sys
-sys.path.insert(0,'.')
+
 from src.database import create_db_connection, write_audit_event_to_database, \
     write_billing_event_to_database, write_fraud_event_to_database
 from src.event_mapper import event_from_json_object
-from src.s3 import fetch_decryption_key, fetch_import_file
+from src.s3 import fetch_import_file, delete_import_file
 from src.kms import decrypt
 
 logging.basicConfig(level=logging.INFO)
 
 
-def import_events(event, context):
+def import_events(event, __):
     database_password = None
     if 'ENCRYPTED_DATABASE_PASSWORD' in os.environ:
         database_password = decrypt(os.environ['ENCRYPTED_DATABASE_PASSWORD']).decode()
@@ -38,6 +36,4 @@ def import_events(event, context):
             except Exception as exception:
                 logging.getLogger('event-recorder').exception('Failed to store message{}'.format(exception))
 
-
-if __name__ == "__main__":
-    import_events([], [])
+        delete_import_file(bucket, filename)

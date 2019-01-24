@@ -3,7 +3,7 @@ import boto3
 import base64
 import json
 import psycopg2
-import string
+
 from moto import mock_s3, mock_kms
 from unittest import TestCase
 from datetime import datetime
@@ -27,10 +27,11 @@ TRANSACTION_ENTITY_ID = 'transaction entity id'
 MINIMUM_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 PROVIDED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 REQUIRED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
-FRAUD_SESSION_EVENT_TYPE='fraud_detected'
-GPG45_STATUS='AA01'
-IMPORT_BUCKET_NAME='s3-import-bucket'
-IMPORT_FILE_NAME='imports/replay-events.json'
+FRAUD_SESSION_EVENT_TYPE = 'fraud_detected'
+GPG45_STATUS = 'AA01'
+IMPORT_BUCKET_NAME = 's3-import-bucket'
+IMPORT_FILE_NAME = 'imports/replay-events.json'
+
 
 @mock_s3
 @mock_kms
@@ -78,6 +79,7 @@ class ImportHandlerTest(TestCase):
         self.__assert_audit_events_table_has_fraud_event_records([('sample-id-3', 'session-id-3', 'fraud-event-id-1'), ('sample-id-4', 'session-id-4', 'fraud-event-id-2')])
         self.__assert_billing_events_table_has_billing_event_records(['session-id-1', 'session-id-2'])
         self.__assert_fraud_events_table_has_fraud_event_records([('session-id-3', 'fraud-event-id-1'), ('session-id-4', 'fraud-event-id-2')])
+        self.__assert_import_file_has_been_removed_from_s3()
 
     def test_does_not_write_dupicate_messages_to_db_with_password_from_env(self):
         self.__setup_s3()
@@ -111,6 +113,7 @@ class ImportHandlerTest(TestCase):
                     'Failed to store an audit event. The Event ID sample-id-3 already exists in the database'
                 )
             )
+            self.__assert_import_file_has_been_removed_from_s3()
 
     def __clean_db(self):
         with RunInTransaction(self.db_connection) as cursor:
@@ -253,6 +256,11 @@ class ImportHandlerTest(TestCase):
             self.assertEqual(matching_records[4], IDP_ENTITY_ID)
             self.assertEqual(matching_records[5], fraud_event[1])
             self.assertEqual(matching_records[6], GPG45_STATUS)
+
+    def __assert_import_file_has_been_removed_from_s3(self):
+        s3 = boto3.resource('s3')
+        bucket = s3.Bucket(IMPORT_BUCKET_NAME)
+        self.assertEqual(len(list(bucket.objects.all())), 0)
 
     def __setup_db_connection_string(self, password_in_env=False):
         if password_in_env:
