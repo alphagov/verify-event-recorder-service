@@ -42,3 +42,26 @@ Therefore binaries built on our dev machines will not work on Lambda.
 
 As a workaround, we have created all the required binaries on a linux VM, and have added them to source control. Our 
 package task will use these binaries in preference to any which are created on the host system.
+
+## Replaying Events from ida-hub-support database
+
+To replay events from the ida-hub-support MongoDB instance to the event recorder, you must first export the events from the relevant Mongo instance by ssh'ing into the database box and running the following commands:
+
+```bash
+password=$(sudo /usr/share/ida-webops/bin/verify-puppet lookup --render-as s profiles::ida_mongo_users::readonlypassword)
+mongoexport \
+	-u readonly \
+	-p $password \
+	-d auditDb \
+	-c auditEvents \
+	-q '{ "document.timestamp":{ "$gte": "2019-01-18T00:00:00.000Z", "$lte": "2019-01-18T23:59:59.999Z" }}' \
+	--out export.json
+```
+Note: in the above example the `-q` parameter contains a query looking for all events created on a specific day (18/01/2019)
+indicated by the `document.timestamp` field. Ensure you adjust the time parameters appropriately for the period
+you are interested in, or provide a different query altogether. Omitting the `-q` parameter and it's value will result
+in all events being exported from the database. See [Mongo Docs](https://docs.mongodb.com/manual/reference/program/mongoexport/) for more info.
+
+You should then download this file, over a secure connection, and upload to the S3 bucket configured as the trigger
+for the import_handler Lambda, this typically has the name `govukverify-event-importing-system-<environment>-import-files`
+ 

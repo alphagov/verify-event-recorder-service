@@ -1,5 +1,5 @@
 -r prod.txt
-boto3==1.5.27
-moto==1.2.0
+boto3==1.9.83
+moto==1.3.7
 testfixtures==5.4.0
 retrying==1.3.3
