@@ -23,7 +23,10 @@ class RunInTransaction:
         return self.__connection.cursor()
 
     def __exit__(self, type, value, traceback):
-        self.__connection.commit()
+        if type is None:
+            self.__connection.commit()
+        else:
+            self.__connection.rollback()
 
 
 def write_audit_event_to_database(event, db_connection):
@@ -47,8 +50,12 @@ def write_audit_event_to_database(event, db_connection):
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
             getLogger('event-recorder').warning('Failed to store an audit event. The Event ID {0} already exists in the database'.format(event.event_id))
+            return False
         else:
             raise integrityError
+
+    return True
+
 
 def write_billing_event_to_database(event, db_connection):
     try:
@@ -74,6 +81,7 @@ def write_billing_event_to_database(event, db_connection):
     except IntegrityError as integrityError:
         getLogger('event-recorder').warning('Failed to store a billing event [Event ID {0}] due to integrity error'.format(event.event_id))
         raise integrityError
+
 
 def write_fraud_event_to_database(event, db_connection):
     try:
