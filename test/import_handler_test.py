@@ -81,7 +81,7 @@ class ImportHandlerTest(TestCase):
         self.__assert_fraud_events_table_has_fraud_event_records([('session-id-3', 'fraud-event-id-1'), ('session-id-4', 'fraud-event-id-2')])
         self.__assert_import_file_has_been_removed_from_s3()
 
-    def test_does_not_write_dupicate_messages_to_db_with_password_from_env(self):
+    def test_does_not_write_duplicate_messages_to_db_with_password_from_env(self):
         self.__setup_s3()
         self.__setup_db_connection_string(True)
 
@@ -217,6 +217,7 @@ class ImportHandlerTest(TestCase):
                     WHERE
                         session_id = %s;
                 """, [session_id])
+                self.assertEqual(cursor.rowcount, 1)
                 matching_records = cursor.fetchone()
 
             self.assertIsNotNone(matching_records)
@@ -246,6 +247,7 @@ class ImportHandlerTest(TestCase):
                     WHERE
                         session_id = %s;
                 """, [fraud_event[0]])
+                self.assertEqual(cursor.rowcount, 1)
                 matching_records = cursor.fetchone()
 
             self.assertIsNotNone(matching_records)

@@ -27,11 +27,11 @@ def import_events(event, __):
                 message_envelope = json.loads(line)
                 event = event_from_json_object(message_envelope['document'])
 
-                write_audit_event_to_database(event, db_connection)
-                if event.event_type == 'session_event' and event.details.get('session_event_type') == 'idp_authn_succeeded':
-                    write_billing_event_to_database(event, db_connection)
-                if event.event_type == 'session_event' and event.details.get('session_event_type') == 'fraud_detected':
-                    write_fraud_event_to_database(event, db_connection)
+                if write_audit_event_to_database(event, db_connection):
+                    if event.event_type == 'session_event' and event.details.get('session_event_type') == 'idp_authn_succeeded':
+                        write_billing_event_to_database(event, db_connection)
+                    if event.event_type == 'session_event' and event.details.get('session_event_type') == 'fraud_detected':
+                        write_fraud_event_to_database(event, db_connection)
 
             except Exception as exception:
                 logging.getLogger('event-recorder').exception('Failed to store message{}'.format(exception))
