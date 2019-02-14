@@ -144,16 +144,14 @@ class EventHandlerTest(TestCase):
             self.__assert_billing_events_table_has_no_billing_event_records
             self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
-                (
-                    'event-recorder',
-                    'WARNING',
-                    'Failed to store a billing event [Event ID sample-id-1] due to key error'
-                ),
-                (
-                    'event-recorder',
-                    'ERROR',
-                    'Failed to store message'
-                )
+                ('event-recorder', 'INFO', 'Got decryption key from S3'),
+                ('event-recorder', 'INFO', 'Decrypted key successfully'),
+                ('event-recorder', 'INFO', 'Created connection to DB'),
+                ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
+                ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
+                ('event-recorder', 'WARNING', 'Failed to store a billing event [Event ID sample-id-1] due to key error'),
+                ('event-recorder', 'ERROR', 'Failed to store message'),
+                ('event-recorder', 'INFO', 'Queue is empty - finishing after 1 events')
             )
             self.assertEqual(self.__number_of_visible_messages(), '0')
             self.assertEqual(self.__number_of_hidden_messages(), '1')
@@ -173,16 +171,14 @@ class EventHandlerTest(TestCase):
             self.__assert_billing_events_table_has_no_billing_event_records
             self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
-                (
-                    'event-recorder',
-                    'WARNING',
-                    'Failed to store a fraud event [Event ID sample-id-1] due to key error'
-                ),
-                (
-                    'event-recorder',
-                    'ERROR',
-                    'Failed to store message'
-                )
+                ('event-recorder', 'INFO', 'Got decryption key from S3'),
+                ('event-recorder', 'INFO', 'Decrypted key successfully'),
+                ('event-recorder', 'INFO', 'Created connection to DB'),
+                ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
+                ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
+                ('event-recorder', 'WARNING', 'Failed to store a fraud event [Event ID sample-id-1] due to key error'),
+                ('event-recorder', 'ERROR', 'Failed to store message'),
+                ('event-recorder', 'INFO', 'Queue is empty - finishing after 1 events')
             )
             self.assertEqual(self.__number_of_visible_messages(), '0')
             self.assertEqual(self.__number_of_hidden_messages(), '1')
@@ -203,11 +199,15 @@ class EventHandlerTest(TestCase):
             self.__assert_billing_events_table_has_billing_event_records(['session-id-2'])
             self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
-                (
-                    'event-recorder',
-                    'ERROR',
-                    'Failed to store message'
-                )
+                ('event-recorder', 'INFO', 'Got decryption key from S3'),
+                ('event-recorder', 'INFO', 'Decrypted key successfully'),
+                ('event-recorder', 'INFO', 'Created connection to DB'),
+                ('event-recorder', 'ERROR', 'Failed to store message'),
+                ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-2'),
+                ('event-recorder', 'INFO', 'Stored audit event: sample-id-2'),
+                ('event-recorder', 'INFO', 'Stored billing event: sample-id-2'),
+                ('event-recorder', 'INFO', 'Deleted event from queue with ID: sample-id-2'),
+                ('event-recorder', 'INFO', 'Queue is empty - finishing after 2 events')
             )
             self.assertEqual(self.__number_of_visible_messages(), '0')
             self.assertEqual(self.__number_of_hidden_messages(), '1')
@@ -228,11 +228,19 @@ class EventHandlerTest(TestCase):
             self.__assert_billing_events_table_has_billing_event_records(['session-id-1'])
             self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
-                (
-                    'event-recorder',
-                    'WARNING',
-                    'Failed to store an audit event. The Event ID sample-id-1 already exists in the database'
-                )
+                ('event-recorder', 'INFO', 'Got decryption key from S3'),
+                ('event-recorder', 'INFO', 'Decrypted key successfully'),
+                ('event-recorder', 'INFO', 'Created connection to DB'),
+                ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
+                ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
+                ('event-recorder', 'INFO', 'Stored billing event: sample-id-1'),
+                ('event-recorder', 'INFO', 'Deleted event from queue with ID: sample-id-1'),
+                ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
+                ('event-recorder', 'WARNING', 'Failed to store an audit event. The Event ID sample-id-1 already exists in the database'),
+                ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
+                ('event-recorder', 'INFO', 'Stored billing event: sample-id-1'),
+                ('event-recorder', 'INFO', 'Deleted event from queue with ID: sample-id-1'),
+                ('event-recorder', 'INFO', 'Queue is empty - finishing after 2 events')
             )
             self.assertEqual(self.__number_of_visible_messages(), '0')
             self.assertEqual(self.__number_of_hidden_messages(), '0')
