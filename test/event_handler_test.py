@@ -132,7 +132,7 @@ class EventHandlerTest(TestCase):
     def test_writes_incomplete_billing_event_to_audit_events_table_but_not_to_billing_events_table(self):
         self.__setup_s3()
         with LogCapture('event-recorder', propagate=False) as log_capture:
-            self.__encrypt_and_send_to_sqs(
+            message_ids = self.__encrypt_and_send_to_sqs(
                 [
                     create_billing_event_without_minimum_level_of_assurance_string('sample-id-1', 'session-id-1'),
                 ]
@@ -150,7 +150,7 @@ class EventHandlerTest(TestCase):
                 ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
                 ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
                 ('event-recorder', 'WARNING', 'Failed to store a billing event [Event ID sample-id-1] due to key error'),
-                ('event-recorder', 'ERROR', 'Failed to store message'),
+                ('event-recorder', 'ERROR', 'Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format('sample-id-1', EVENT_TYPE, message_ids[0])),
                 ('event-recorder', 'INFO', 'Queue is empty - finishing after 1 events')
             )
             self.assertEqual(self.__number_of_visible_messages(), '0')
@@ -159,7 +159,7 @@ class EventHandlerTest(TestCase):
     def test_writes_incomplete_fraud_event_to_audit_events_table_but_not_to_fraud_events_table(self):
         self.__setup_s3()
         with LogCapture('event-recorder', propagate=False) as log_capture:
-            self.__encrypt_and_send_to_sqs(
+            message_ids = self.__encrypt_and_send_to_sqs(
                 [
                     create_fraud_event_without_idp_fraud_event_id_string('sample-id-1', 'session-id-1'),
                 ]
@@ -177,7 +177,7 @@ class EventHandlerTest(TestCase):
                 ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
                 ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
                 ('event-recorder', 'WARNING', 'Failed to store a fraud event [Event ID sample-id-1] due to key error'),
-                ('event-recorder', 'ERROR', 'Failed to store message'),
+                ('event-recorder', 'ERROR', 'Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format('sample-id-1', EVENT_TYPE, message_ids[0])),
                 ('event-recorder', 'INFO', 'Queue is empty - finishing after 1 events')
             )
             self.assertEqual(self.__number_of_visible_messages(), '0')
@@ -186,7 +186,7 @@ class EventHandlerTest(TestCase):
     def test_does_not_delete_invalid_messages(self):
         self.__setup_s3()
         with LogCapture('event-recorder', propagate=False) as log_capture:
-            self.__encrypt_and_send_to_sqs(
+            message_ids = self.__encrypt_and_send_to_sqs(
                 [
                     'invalid event',
                     create_event_string('sample-id-2', 'session-id-2'),
@@ -202,7 +202,7 @@ class EventHandlerTest(TestCase):
                 ('event-recorder', 'INFO', 'Got decryption key from S3'),
                 ('event-recorder', 'INFO', 'Decrypted key successfully'),
                 ('event-recorder', 'INFO', 'Created connection to DB'),
-                ('event-recorder', 'ERROR', 'Failed to store message'),
+                ('event-recorder', 'ERROR', 'Failed to decrypt message, SQS ID = {0}'.format(message_ids[0])),
                 ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-2'),
                 ('event-recorder', 'INFO', 'Stored audit event: sample-id-2'),
                 ('event-recorder', 'INFO', 'Stored billing event: sample-id-2'),
@@ -246,13 +246,16 @@ class EventHandlerTest(TestCase):
             self.assertEqual(self.__number_of_hidden_messages(), '0')
 
     def __encrypt_and_send_to_sqs(self, messages):
+        message_ids = []
         for message in messages:
             encrypted_message = encrypt_string(message, ENCRYPTION_KEY)
-            self.__sqs_client.send_message(
+            response = self.__sqs_client.send_message(
                 QueueUrl=self.__queue_url,
                 MessageBody=encrypted_message,
                 DelaySeconds=0
             )
+            message_ids.append(response['MessageId'])
+        return message_ids
 
     def __number_of_visible_messages(self):
         return self.__get_attribute('ApproximateNumberOfMessages')
