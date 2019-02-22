@@ -11,7 +11,6 @@ from src.kms import decrypt
 from src.s3 import fetch_decryption_key
 from src.sqs import fetch_single_message, delete_message
 
-logging.basicConfig(level=logging.INFO)
 
 # noinspection PyUnusedLocal
 def store_queued_events(_, __):
@@ -19,6 +18,8 @@ def store_queued_events(_, __):
     queue_url = os.environ['QUEUE_URL']
 
     logger = logging.getLogger('event-recorder')
+    logger.setLevel(logging.INFO)
+
     if 'ENCRYPTION_KEY' in os.environ:
       encrypted_decryption_key = os.environ['ENCRYPTION_KEY']
       logger.info('Got decryption key from environment variable')
