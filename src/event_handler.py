@@ -47,6 +47,7 @@ def store_queued_events(_, __):
 
         # noinspection PyBroadException
         # catch all errors and log them - we never want a single failing message to kill the process.
+        event = None
         try:
             decrypted_message = decrypt_message(message['Body'], decryption_key)
             event = event_from_json(decrypted_message)
@@ -62,4 +63,7 @@ def store_queued_events(_, __):
             delete_message(sqs_client, queue_url, message)
             logger.info('Deleted event from queue with ID: {0}'.format(event.event_id))
         except Exception as exception:
-            logger.exception('Failed to store message')
+            if event:
+                logger.exception('Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format(event.event_id, event.event_type, message['MessageId']))
+            else:
+                logger.exception('Failed to decrypt message, SQS ID = {0}'.format(message['MessageId']))
