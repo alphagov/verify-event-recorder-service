@@ -36,11 +36,13 @@ Migrations should run in the same pipeline as app deployments.
 
 The pipeline should test for compatibility between the version of the app and the version of the database before moving on to the next environment.
 
-Having this pipeline will require Concourse to authenticate into the database.
+This pipeline will require Concourse to have enough permissions to submit jobs to the database.
 
 ### Running the migrations
 
 We will run migrations as AWS Batch jobs.
+
+The Batch job will need to authenticate to the database.
 
 We considered using:
 
