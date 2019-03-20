@@ -2,6 +2,7 @@ import logging
 import os
 
 import boto3
+from psycopg2.extensions import parse_dsn
 
 from src.database import create_db_connection, write_audit_event_to_database, \
     write_billing_event_to_database, write_fraud_event_to_database
@@ -21,19 +22,25 @@ def store_queued_events(_, __):
     logger.setLevel(logging.INFO)
 
     if 'ENCRYPTION_KEY' in os.environ:
-      encrypted_decryption_key = os.environ['ENCRYPTION_KEY']
-      logger.info('Got decryption key from environment variable')
+        encrypted_decryption_key = os.environ['ENCRYPTION_KEY']
+        logger.info('Got decryption key from environment variable')
     else:
-      encrypted_decryption_key = fetch_decryption_key()
-      logger.info('Got decryption key from S3')
+        encrypted_decryption_key = fetch_decryption_key()
+        logger.info('Got decryption key from S3')
     decryption_key = decrypt(encrypted_decryption_key)
     logger.info('Decrypted key successfully')
 
+    dsn = os.environ['DB_CONNECTION_STRING']
     database_password = None
     if 'ENCRYPTED_DATABASE_PASSWORD' in os.environ:
-      # boto returns decrypted as b'bytes' so decode to convert to password string
-      database_password = decrypt(os.environ['ENCRYPTED_DATABASE_PASSWORD']).decode()
-    db_connection = create_db_connection(database_password)
+        # boto returns decrypted as b'bytes' so decode to convert to password string
+        database_password = decrypt(os.environ['ENCRYPTED_DATABASE_PASSWORD']).decode()
+    else:
+        dsn_components = parse_dsn(dsn)
+        database_password = boto3.client('rds').generate_db_auth_token(dsn_components['host'], 5432,
+                                                                       dsn_components['user'])
+
+    db_connection = create_db_connection(dsn, database_password)
     logger.info('Created connection to DB')
 
     event_count = 0
@@ -64,6 +71,9 @@ def store_queued_events(_, __):
             logger.info('Deleted event from queue with ID: {0}'.format(event.event_id))
         except Exception as exception:
             if event:
-                logger.exception('Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format(event.event_id, event.event_type, message['MessageId']))
+                logger.exception(
+                    'Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format(event.event_id,
+                                                                                                 event.event_type,
+                                                                                                 message['MessageId']))
             else:
                 logger.exception('Failed to decrypt message, SQS ID = {0}'.format(message['MessageId']))

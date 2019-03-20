@@ -104,6 +104,11 @@ class ImportHandlerTest(TestCase):
             log_capture.check(
                 (
                     'event-recorder',
+                    'INFO',
+                    'Created connection to DB'
+                ),
+                (
+                    'event-recorder',
                     'WARNING',
                     'Failed to store an audit event. The Event ID sample-id-1 already exists in the database'
                 ),
