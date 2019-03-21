@@ -65,3 +65,18 @@ in all events being exported from the database. See [Mongo Docs](https://docs.mo
 You should then download this file, over a secure connection, and upload to the S3 bucket configured as the trigger
 for the import_handler Lambda, this typically has the name `govukverify-event-importing-system-<environment>-import-files`
  
+### Environment Variables
+
+The following environment vars are should be defined in the lambda function:
+
+* `DB_CONNECTION_STRING` (_required_):- The connection string used to connect to the database. This should be of the format:
+`host=<hostname> dbname=<databasename> user=<username>`. The connection string could also contain `port=<portnumber>` if the database is listening on a non-standard port.
+* `QUEUE_URL` (_required_):- The URL to SQS queue to read events from. 
+* `ENCRYPTED_DATABASE_PASSWORD` (_optional_):- The password used to connect to the database, this should be KMS encrypted. If not provided the recorder
+will attempt to get an IAM token to connect to the database as the user specified in `DB_CONNECTION_STRING`.
+
+Also required is either:
+* `ENCRYPTION_KEY`:- the encryption key used to decrypt messages found in the queue.
+OR
+* `DECRYPTION_KEY_BUCKET_NAME`:- An S3 bucket name where a file containing the decryption key for events is stored.
+* `DECRYPTION_KEY_FILE_NAME`:- The file in the above containing the decryption key.
