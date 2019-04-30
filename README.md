@@ -10,6 +10,12 @@ To run all tests and package locally you must have docker running. Once docker i
 
 Running pre-commit will start docker-compose with Postgres and our code then run tests.
 
+# Database Schemas
+
+The database scripts live in [verify-event-system-database-scripts](https://github.com/alphagov/verify-event-system-database-scripts).
+
+The tests currently rely on scripts in the migrations directory of the agove repo.
+
 ## Using pre-commit hooks
 
 If you run the `./pre-commit` script it will suggest you install `pre-commit`.
