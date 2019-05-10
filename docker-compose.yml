@@ -5,6 +5,8 @@ services:
     build:
       context: .
       dockerfile: postgres.Dockerfile
+    environment:
+      POSTGRES_DB: events
 
   tests:
     build: .
