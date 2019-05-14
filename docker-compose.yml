@@ -12,3 +12,5 @@ services:
     build: .
     depends_on:
       - event-store
+    environment:
+      - SPLUNK_HEC_TOKEN_TEST

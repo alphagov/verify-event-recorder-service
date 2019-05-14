@@ -11,6 +11,7 @@ from src.event_mapper import event_from_json
 from src.kms import decrypt
 from src.s3 import fetch_decryption_key
 from src.sqs import fetch_single_message, delete_message
+from src.pysplunkhec import push_event_to_splunk
 
 
 # noinspection PyUnusedLocal
@@ -67,6 +68,22 @@ def store_queued_events(_, __):
             if event.event_type == 'session_event' and event.details.get('session_event_type') == 'fraud_detected':
                 write_fraud_event_to_database(event, db_connection)
                 logger.info('Stored fraud event: {0}'.format(event.event_id))
+
+                # really don't want the event system to fail because of Splunk logging
+                splunk_res = False
+                try:
+                    splunk_res = push_event_to_splunk(decrypted_message)
+                except Exception as e:
+                    splunk_res = False
+
+                if splunk_res and splunk_res[0] == 200:
+                    # log successfully pushed events
+                    logger.info('Pushed fraud event to Splunk: {0}'.format(event.event_id))
+                else:
+                    # log unsuccessful push events as errors but don't raise an exception
+                    # this way, if Splunk was down, the event system still works as expected
+                    logger.error('Failed to push fraud event to Splunk: {0}'.format(event.event_id))
+
             delete_message(sqs_client, queue_url, message)
             logger.info('Deleted event from queue with ID: {0}'.format(event.event_id))
         except Exception as exception:

@@ -4,6 +4,7 @@ import base64
 import json
 import uuid
 import psycopg2
+import responses
 from moto import mock_sqs, mock_s3, mock_kms
 from unittest import TestCase
 from datetime import datetime
@@ -27,8 +28,12 @@ TRANSACTION_ENTITY_ID = 'transaction entity id'
 MINIMUM_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 PROVIDED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 REQUIRED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
-FRAUD_SESSION_EVENT_TYPE='fraud_detected'
-GPG45_STATUS='AA01'
+FRAUD_SESSION_EVENT_TYPE = 'fraud_detected'
+GPG45_STATUS = 'AA01'
+SPLUNK_HEC_TOKEN = os.getenv('SPLUNK_HEC_TOKEN_TEST', 'blank')
+SPLUNK_HEC_HOST = 'http-inputs-gds.splunkcloud.com'
+SPLUNK_HEC_PORT = '443'
+SPLUNK_HEC_INDEX = 'test_data'
 
 @mock_sqs
 @mock_s3
@@ -54,6 +59,7 @@ class EventHandlerTest(TestCase):
     def setUp(self):
         setup_stub_aws_config()
         self.__setup_kms()
+        self.__setup_splunk_hec()
         self.__setup_db_connection_string()
         self.__setup_sqs()
 
@@ -82,6 +88,7 @@ class EventHandlerTest(TestCase):
 
     def test_reads_fraud_events_from_queue(self):
         self.__setup_s3()
+        responses.add_passthru(f'https://{SPLUNK_HEC_HOST}')
         self.__encrypt_and_send_to_sqs(
             [
                 create_fraud_event_string('sample-id-1', 'session-id-1', 'fraud-event-id-1'),
@@ -435,6 +442,15 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[4], IDP_ENTITY_ID)
             self.assertEqual(matching_records[5], fraud_event[1])
             self.assertEqual(matching_records[6], GPG45_STATUS)
+
+    def __setup_splunk_hec(self):
+        if SPLUNK_HEC_TOKEN != "blank":
+            os.environ['SPLUNK_HEC_TOKEN'] = self.__encrypt(SPLUNK_HEC_TOKEN)
+        else:
+            os.environ['SPLUNK_HEC_TOKEN'] = False
+        os.environ['SPLUNK_HEC_HOST'] = SPLUNK_HEC_HOST
+        os.environ['SPLUNK_HEC_PORT'] = SPLUNK_HEC_PORT
+        os.environ['SPLUNK_HEC_INDEX'] = SPLUNK_HEC_INDEX
 
     def __setup_db_connection_string(self, password_in_env=False):
         if password_in_env:
