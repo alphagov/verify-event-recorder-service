@@ -15,6 +15,7 @@ from src import event_handler
 from src.database import RunInTransaction
 from test.test_encrypter import encrypt_string
 
+
 EVENT_TYPE = 'session_event'
 TIMESTAMP = 1518264452000 # '2018-02-10 12:07:32'
 ORIGINATING_SERVICE = 'test service'
@@ -30,7 +31,7 @@ PROVIDED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 REQUIRED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 FRAUD_SESSION_EVENT_TYPE = 'fraud_detected'
 GPG45_STATUS = 'AA01'
-SPLUNK_HEC_TOKEN = os.getenv('SPLUNK_HEC_TOKEN_TEST', 'blank')
+SPLUNK_HEC_TOKEN = os.getenv('SPLUNK_HEC_TOKEN_TEST', None)
 SPLUNK_HEC_HOST = 'http-inputs-gds.splunkcloud.com'
 SPLUNK_HEC_PORT = '443'
 SPLUNK_HEC_INDEX = 'test_data'
@@ -444,7 +445,7 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[6], GPG45_STATUS)
 
     def __setup_splunk_hec(self):
-        if SPLUNK_HEC_TOKEN != "blank":
+        if SPLUNK_HEC_TOKEN is not None:
             os.environ['SPLUNK_HEC_TOKEN'] = self.__encrypt(SPLUNK_HEC_TOKEN)
         else:
             os.environ['SPLUNK_HEC_TOKEN'] = False

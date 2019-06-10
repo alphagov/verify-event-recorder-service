@@ -70,7 +70,6 @@ def store_queued_events(_, __):
                 logger.info('Stored fraud event: {0}'.format(event.event_id))
 
                 # really don't want the event system to fail because of Splunk logging
-                splunk_res = False
                 try:
                     splunk_res = push_event_to_splunk(decrypted_message)
                 except Exception as e:
@@ -79,7 +78,7 @@ def store_queued_events(_, __):
                 if splunk_res and splunk_res[0] == 200:
                     # log successfully pushed events
                     logger.info('Pushed fraud event to Splunk: {0}'.format(event.event_id))
-                else:
+                elif 'production' in os.environ['QUEUE_URL']:
                     # log unsuccessful push events as errors but don't raise an exception
                     # this way, if Splunk was down, the event system still works as expected
                     logger.error('Failed to push fraud event to Splunk: {0}'.format(event.event_id))
