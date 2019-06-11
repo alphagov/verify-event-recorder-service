@@ -62,9 +62,9 @@ def write_billing_event_to_database(event, db_connection):
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""
                 INSERT INTO billing.billing_events
-                (time_stamp, session_id, hashed_persistent_id, request_id, idp_entity_id, minimum_level_of_assurance, required_level_of_assurance, provided_level_of_assurance)
+                (time_stamp, session_id, hashed_persistent_id, request_id, idp_entity_id, minimum_level_of_assurance, required_level_of_assurance, provided_level_of_assurance, event_id)
                 VALUES
-                (%s, %s, %s, %s, %s, %s, %s, %s);
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s);
             """, [
                 datetime.fromtimestamp(int(event.timestamp) / 1e3),
                 event.session_id,
@@ -73,7 +73,8 @@ def write_billing_event_to_database(event, db_connection):
                 event.details['idp_entity_id'],
                 event.details['minimum_level_of_assurance'],
                 event.details['required_level_of_assurance'],
-                event.details['provided_level_of_assurance']
+                event.details['provided_level_of_assurance'],
+                event.event_id
             ])
     except KeyError as keyError:
         getLogger('event-recorder').warning('Failed to store a billing event [Event ID {0}] due to key error'.format(event.event_id))
