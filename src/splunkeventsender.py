@@ -34,7 +34,7 @@ class SplunkEventSender:
         }
 
     def send(self, payload):
-        logger = logging.getLogger('py-splunk-hec')
+        logger = logging.getLogger('splunk-event-send')
         logger.setLevel(logging.INFO)
 
         headers = {
@@ -64,21 +64,24 @@ class SplunkEventSender:
 
 
 def push_event_to_splunk(event):
+    logger = logging.getLogger('push-event-to-splunk')
+    logger.setLevel(logging.INFO)
+
     if 'production' in os.environ['QUEUE_URL'] 
 
         for var in [
             "SPLUNK_HEC_TOKEN",
-	    "SPLUNK_HEC_HOST",
-	    "SPLUNK_HEC_PORT",
-	    "SPLUNK_HEC_INDEX",
-	]:
-	    if var not in os.environ:
+            "SPLUNK_HEC_HOST",
+            "SPLUNK_HEC_PORT",
+            "SPLUNK_HEC_INDEX",
+        ]:
+            if var not in os.environ:
                 logger.info("'{0}' not set".format(var))
         try:
             s_tokn = decrypt(os.environ['SPLUNK_HEC_TOKEN']).decode()
         except Exception as e:
-		logger.error("splunk-hec-token:failed-to-decrypt:", e)
-                return  False
+            logger.error("splunk-hec-token:failed-to-decrypt:", e)
+            return  False
 
         s_host = os.environ['SPLUNK_HEC_HOST']
         s_port = os.environ['SPLUNK_HEC_PORT']
