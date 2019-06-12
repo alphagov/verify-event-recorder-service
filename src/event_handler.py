@@ -11,7 +11,7 @@ from src.event_mapper import event_from_json
 from src.kms import decrypt
 from src.s3 import fetch_decryption_key
 from src.sqs import fetch_single_message, delete_message
-from src.pysplunkhec import push_event_to_splunk
+from src.splunkeventsender import push_event_to_splunk
 
 
 # noinspection PyUnusedLocal
