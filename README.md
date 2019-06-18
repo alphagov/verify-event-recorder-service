@@ -14,7 +14,7 @@ Running pre-commit will start docker-compose with Postgres and our code then run
 
 The database scripts live in [verify-event-system-database-scripts](https://github.com/alphagov/verify-event-system-database-scripts).
 
-The tests currently rely on scripts in the migrations directory of the agove repo.
+The tests currently rely on scripts in the migrations directory of the above repo.
 
 ## Using pre-commit hooks
 
@@ -32,13 +32,24 @@ pre-commit install --hook-type pre-commit
 To push without running the tests, for example if you've only changed a comment, you can disable them:
 `git commit --no-verify`
 
-## Packaging the application for release
-Build the zip file to pass to Lambda by running
-```
+# Release
+
+## Automated release
+
+The code in this repository gets built and deployed to the Lambda function, as part of a continuous
+integration and deployment (CI/CD) pipeline in Concourse, upon merge into the `master` branch.
+
+## Manual release
+
+If, for any reason, you need to manually deploy the code, package it up by running the following
+script:
+
+```bash
 ./build/package.sh
 ```
 
 ### Binaries
+
 Lambda ought to work by providing a zip of the source code and the python files for the dependencies.
 However, some of our python libraries are not pure python. Instead they rely on some C binaries.
 
