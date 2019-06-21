@@ -9,6 +9,7 @@ from src.event_mapper import event_from_json_object
 from src.s3 import fetch_import_file, delete_import_file
 from src.kms import decrypt
 from psycopg2.extensions import parse_dsn
+from src.fraud_log_invoker import send_to_fraud_logger
 
 
 def import_events(event, __):
@@ -44,6 +45,7 @@ def import_events(event, __):
                         write_billing_event_to_database(event, db_connection)
                     if event.event_type == 'session_event' and event.details.get('session_event_type') == 'fraud_detected':
                         write_fraud_event_to_database(event, db_connection)
+            send_to_fraud_logger(event)
 
             except Exception as exception:
                 logger.exception('Failed to store message{}'.format(exception))
