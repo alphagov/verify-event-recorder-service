@@ -11,6 +11,7 @@ from src.event_mapper import event_from_json
 from src.kms import decrypt
 from src.s3 import fetch_decryption_key
 from src.sqs import fetch_single_message, delete_message
+from src.fraud_log_invoker import send_to_fraud_logger
 
 
 # noinspection PyUnusedLocal
@@ -67,6 +68,8 @@ def store_queued_events(_, __):
             if event.event_type == 'session_event' and event.details.get('session_event_type') == 'fraud_detected':
                 write_fraud_event_to_database(event, db_connection)
                 logger.info('Stored fraud event: {0}'.format(event.event_id))
+                send_to_fraud_logger(event)
+
             delete_message(sqs_client, queue_url, message)
             logger.info('Deleted event from queue with ID: {0}'.format(event.event_id))
         except Exception as exception:

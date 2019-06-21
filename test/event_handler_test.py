@@ -13,6 +13,7 @@ from retrying import retry
 from src import event_handler
 from src.database import RunInTransaction
 from test.test_encrypter import encrypt_string
+from test.fraud_invoke_test import setup_lambda
 
 EVENT_TYPE = 'session_event'
 TIMESTAMP = 1518264452000 # '2018-02-10 12:07:32'
@@ -62,6 +63,7 @@ class EventHandlerTest(TestCase):
 
     def test_reads_messages_from_queue_with_key_from_s3(self):
         self.__setup_s3()
+        setup_lambda()
         self.__encrypt_and_send_to_sqs(
             [
                 create_event_string('sample-id-1', 'session-id-1'),
@@ -82,6 +84,7 @@ class EventHandlerTest(TestCase):
 
     def test_reads_fraud_events_from_queue(self):
         self.__setup_s3()
+        setup_lambda()
         self.__encrypt_and_send_to_sqs(
             [
                 create_fraud_event_string('sample-id-1', 'session-id-1', 'fraud-event-id-1'),
@@ -116,6 +119,7 @@ class EventHandlerTest(TestCase):
 
     def test_writes_messages_to_db_with_password_from_env(self):
         self.__setup_s3()
+        setup_lambda()
         self.__setup_db_connection_string(True)
         self.__encrypt_and_send_to_sqs(
             [
@@ -131,6 +135,7 @@ class EventHandlerTest(TestCase):
 
     def test_writes_incomplete_billing_event_to_audit_events_table_but_not_to_billing_events_table(self):
         self.__setup_s3()
+        setup_lambda()
         with LogCapture('event-recorder', propagate=False) as log_capture:
             message_ids = self.__encrypt_and_send_to_sqs(
                 [
@@ -158,6 +163,7 @@ class EventHandlerTest(TestCase):
 
     def test_writes_incomplete_fraud_event_to_audit_events_table_but_not_to_fraud_events_table(self):
         self.__setup_s3()
+        setup_lambda()
         with LogCapture('event-recorder', propagate=False) as log_capture:
             message_ids = self.__encrypt_and_send_to_sqs(
                 [
@@ -185,6 +191,7 @@ class EventHandlerTest(TestCase):
 
     def test_does_not_delete_invalid_messages(self):
         self.__setup_s3()
+        setup_lambda()
         with LogCapture('event-recorder', propagate=False) as log_capture:
             message_ids = self.__encrypt_and_send_to_sqs(
                 [
@@ -214,6 +221,7 @@ class EventHandlerTest(TestCase):
 
     def test_records_error_but_does_delete_messages_for_duplicate_events(self):
         self.__setup_s3()
+        setup_lambda()
         with LogCapture('event-recorder', propagate=False) as log_capture:
             self.__encrypt_and_send_to_sqs(
                 [
@@ -491,7 +499,7 @@ class EventHandlerTest(TestCase):
 
 def setup_stub_aws_config():
     os.environ = {
-        'AWS_DEFAULT_REGION': 'eu-west-2',
+        'AWS_DEFAULT_REGION': 'us-west-2',
         'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
         'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY'
     }

@@ -4,7 +4,7 @@ import base64
 import json
 import psycopg2
 
-from moto import mock_s3, mock_kms
+from moto import mock_s3, mock_kms, mock_lambda
 from unittest import TestCase
 from datetime import datetime
 from testfixtures import LogCapture
@@ -12,6 +12,7 @@ from retrying import retry
 
 from src import import_handler
 from src.database import RunInTransaction
+from test.fraud_invoke_test import setup_lambda
 
 EVENT_TYPE = 'session_event'
 TIMESTAMP = 1518264000000
@@ -35,11 +36,13 @@ IMPORT_FILE_NAME = 'imports/replay-events.json'
 
 @mock_s3
 @mock_kms
+@mock_lambda
 class ImportHandlerTest(TestCase):
     __s3_client = None
     __kms_client = None
     __queue_url = None
     __key_id = None
+    __lambda_client = None
     db_connection = None
     db_connection_string = "host='event-store' dbname='events' user='postgres'"
 
@@ -62,6 +65,7 @@ class ImportHandlerTest(TestCase):
 
     def test_writes_messages_to_db_with_password_from_env(self):
         self.__setup_s3()
+        setup_lambda()
         self.__setup_db_connection_string(True)
 
         self.__write_import_file_to_s3(
@@ -83,6 +87,7 @@ class ImportHandlerTest(TestCase):
 
     def test_does_not_write_duplicate_messages_to_db_with_password_from_env(self):
         self.__setup_s3()
+        setup_lambda()
         self.__setup_db_connection_string(True)
 
         self.__write_import_file_to_s3(
@@ -322,7 +327,7 @@ class ImportHandlerTest(TestCase):
 
     def __setup_stub_aws_config(self):
         os.environ = {
-            'AWS_DEFAULT_REGION': 'eu-west-2',
+            'AWS_DEFAULT_REGION': 'us-west-2',
             'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
             'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY'
         }
