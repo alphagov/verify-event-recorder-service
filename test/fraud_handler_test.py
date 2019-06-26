@@ -71,3 +71,8 @@ class FraudHandlerTest(TestCase):
             'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
             'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY'
         }
+
+    def test_push_to_s3(self):
+        self.__setup_s3()
+        self.__write_to_s3(BUCKET, KEY)
+        fraud_handler.push_to_s3(None, None)
