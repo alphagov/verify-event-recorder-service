@@ -19,6 +19,17 @@ RANDOM_STRING = ''.join(random.choice(LETTERS) for i in range(8))
 KEY = 'verify-fraud-events-{}-{}.log'.format(RANDOM_STRING, TODAY)
 BUCKET = 'key-bucket'
 
+EVENT_TYPE = 'session_event'
+ISO3359_TIMESTAMP = '2018-02-10T12:00:00Z'
+ORIGINATING_SERVICE = 'test service'
+PID = '26b1e565bb63e7fc3c2ccf4e018f50b84953b02b89d523654034e24a4907d50c'
+REQUEST_ID = '_a217717d-ce3d-407c-88c1-d3d592b6db8c'
+IDP_ENTITY_ID = 'idp entity id'
+TRANSACTION_ENTITY_ID = 'transaction entity id'
+FRAUD_SESSION_EVENT_TYPE = 'fraud_detected'
+GPG45_STATUS = 'AA01'
+
+
 @mock_s3
 class FraudHandlerTest(TestCase):
     __s3_client = None
