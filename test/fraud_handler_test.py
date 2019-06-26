@@ -57,7 +57,7 @@ class FraudHandlerTest(TestCase):
 
 
     def __write_to_s3(self, BUCKET, KEY):
-        CONTENT = self.__create_fraud_event_string()
+        CONTENT = self.__create_fraud_event_string('sample-id-3', 'session-id-3', 'fraud-event-id-1')
         self.__s3_client.put_object(
             Bucket=BUCKET,
             Key=KEY,
