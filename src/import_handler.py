@@ -45,7 +45,7 @@ def import_events(event, __):
                         write_billing_event_to_database(event, db_connection)
                     if event.event_type == 'session_event' and event.details.get('session_event_type') == 'fraud_detected':
                         write_fraud_event_to_database(event, db_connection)
-            send_to_fraud_logger(event)
+                        send_to_fraud_logger(event)
 
             except Exception as exception:
                 logger.exception('Failed to store message{}'.format(exception))
