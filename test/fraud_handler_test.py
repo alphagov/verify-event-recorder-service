@@ -53,7 +53,7 @@ class FraudHandlerTest(TestCase):
                 }
             }
         })
-	return CONTENT
+        return CONTENT
 
 
     def __write_to_s3(self, BUCKET, KEY):
