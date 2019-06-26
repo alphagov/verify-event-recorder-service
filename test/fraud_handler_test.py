@@ -86,4 +86,14 @@ class FraudHandlerTest(TestCase):
     def test_push_to_s3(self):
         self.__setup_s3()
         self.__write_to_s3(BUCKET, KEY)
-        fraud_handler.push_to_s3(None, None)
+        self.key = KEY
+        self.bucket = BUCKET
+        self.role = 'test-role'
+        self.s_index = S_INDEX
+        self.verify_to_s3 = fraud_handler.VerifyFraudToS3(
+            self.key,
+            self.bucket,
+            self.role,
+            self.s_index,
+        )
+        self.verify_to_s3.push_to_s3(None, None)
