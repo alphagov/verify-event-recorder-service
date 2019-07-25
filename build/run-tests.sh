@@ -17,9 +17,7 @@ echo Database Scripts are located at: ${VERIFY_EVENT_SYSTEM_DATABASE_SCRIPTS_LOC
 
 if [[ ! -d "${VERIFY_EVENT_SYSTEM_DATABASE_SCRIPTS_LOCATION}" ]]; then
     echo "Cloning database migration scripts repo..."
-    pushd ${SCRIPT_DIR}/../..
-    git clone git@github.com:alphagov/verify-event-system-database-scripts.git
-    popd
+    git clone git@github.com:alphagov/verify-event-system-database-scripts.git ${VERIFY_EVENT_SYSTEM_DATABASE_SCRIPTS_LOCATION}
 fi
 
 pushd ${SCRIPT_DIR}/.. > /dev/null
