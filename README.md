@@ -14,7 +14,14 @@ Running pre-commit will start docker-compose with Postgres and our code then run
 
 The database scripts live in [verify-event-system-database-scripts](https://github.com/alphagov/verify-event-system-database-scripts).
 
-The tests currently rely on scripts in the migrations directory of the above repo.
+The `./build/run-tests.sh` script expects to find the above repo, checked out, in the `../verify-event-system-database-scripts`
+directory. If it does not find it there, it will automatically clone it to that location.
+
+The `./build/run-tests.sh` script will then build the database migration image and use that image to populate a local
+PostgreSQL container with the correct schema.
+
+If you have related database migration scripts that need to be in place in order for tests to pass, ensure you 
+have the correct branch checked out.
 
 ## Using pre-commit hooks
 
