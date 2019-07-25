@@ -15,7 +15,9 @@ Running pre-commit will start docker-compose with Postgres and our code then run
 The database scripts live in [verify-event-system-database-scripts](https://github.com/alphagov/verify-event-system-database-scripts).
 
 The `./build/run-tests.sh` script expects to find the above repo, checked out, in the `../verify-event-system-database-scripts`
-directory. If it does not find it there, it will automatically clone it to that location.
+directory. If it does not find it there, it will automatically clone it to that location. If you have, or would like, the repo stored elsewhere
+you can override this behaviour by setting the `VERIFY_EVENT_SYSTEM_DATABASE_SCRIPTS_LOCATION` to the required path before running
+the test script.
 
 The `./build/run-tests.sh` script will then build the database migration image and use that image to populate a local
 PostgreSQL container with the correct schema.

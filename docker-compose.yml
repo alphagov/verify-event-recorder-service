@@ -6,11 +6,11 @@ services:
     environment:
       POSTGRES_DB: events
     volumes:
-      - ../verify-event-system-database-scripts/test-initialise-scripts:/docker-entrypoint-initdb.d
+      - ${VERIFY_EVENT_SYSTEM_DATABASE_SCRIPTS_LOCATION}/test-initialise-scripts:/docker-entrypoint-initdb.d
 
   flyway:
     build:
-      context: ../verify-event-system-database-scripts
+      context: ${VERIFY_EVENT_SYSTEM_DATABASE_SCRIPTS_LOCATION}
       dockerfile: Dockerfile
     env_file:
       - test.env
