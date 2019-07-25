@@ -382,7 +382,8 @@ class EventHandlerTest(TestCase):
                         minimum_level_of_assurance,
                         required_level_of_assurance,
                         provided_level_of_assurance,
-                        event_id
+                        event_id,
+                        transaction_entity_id
                     FROM
                         billing.billing_events
                     WHERE
@@ -400,6 +401,7 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[6], PROVIDED_LEVEL_OF_ASSURANCE)
             self.assertEqual(matching_records[7], REQUIRED_LEVEL_OF_ASSURANCE)
             self.assertEqual(matching_records[8], event_id)
+            self.assertEqual(matching_records[9], TRANSACTION_ENTITY_ID)
 
     def __assert_fraud_events_table_has_no_fraud_event_records(self):
         with RunInTransaction(self.db_connection) as cursor:
