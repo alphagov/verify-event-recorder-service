@@ -238,6 +238,9 @@ class EventHandlerTest(TestCase):
                 ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
                 ('event-recorder', 'WARNING', 'Failed to store an audit event. The Event ID sample-id-1 already exists in the database'),
                 ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
+                ('event-recorder',
+                 'WARNING',
+                 'Failed to store a billing event. The Event ID sample-id-1 already exists in the database'),
                 ('event-recorder', 'INFO', 'Stored billing event: sample-id-1'),
                 ('event-recorder', 'INFO', 'Deleted event from queue with ID: sample-id-1'),
                 ('event-recorder', 'INFO', 'Queue is empty - finishing after 2 events')

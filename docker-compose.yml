@@ -2,11 +2,20 @@ version: '3.4'
 
 services:
   event-store:
-    build:
-      context: .
-      dockerfile: postgres.Dockerfile
+    image: postgres:10.6
     environment:
       POSTGRES_DB: events
+    volumes:
+      - ${VERIFY_EVENT_SYSTEM_DATABASE_SCRIPTS_LOCATION}/test-initialise-scripts:/docker-entrypoint-initdb.d
+
+  flyway:
+    build:
+      context: ${VERIFY_EVENT_SYSTEM_DATABASE_SCRIPTS_LOCATION}
+      dockerfile: Dockerfile
+    env_file:
+      - test.env
+    depends_on:
+      - event-store
 
   tests:
     build: .
