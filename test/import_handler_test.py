@@ -75,10 +75,13 @@ class ImportHandlerTest(TestCase):
 
         import_handler.import_events(self.__create_s3_event(), None)
 
-        self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
-        self.__assert_audit_events_table_has_fraud_event_records([('sample-id-3', 'session-id-3', 'fraud-event-id-1'), ('sample-id-4', 'session-id-4', 'fraud-event-id-2')])
+        self.__assert_audit_events_table_has_billing_event_records(
+            [('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+        self.__assert_audit_events_table_has_fraud_event_records(
+            [('sample-id-3', 'session-id-3', 'fraud-event-id-1'), ('sample-id-4', 'session-id-4', 'fraud-event-id-2')])
         self.__assert_billing_events_table_has_billing_event_records(['session-id-1', 'session-id-2'])
-        self.__assert_fraud_events_table_has_fraud_event_records([('session-id-3', 'fraud-event-id-1'), ('session-id-4', 'fraud-event-id-2')])
+        self.__assert_fraud_events_table_has_fraud_event_records(
+            [('session-id-3', 'fraud-event-id-1'), ('session-id-4', 'fraud-event-id-2')])
         self.__assert_import_file_has_been_removed_from_s3()
 
     def test_does_not_write_duplicate_messages_to_db_with_password_from_env(self):
@@ -97,8 +100,10 @@ class ImportHandlerTest(TestCase):
         with LogCapture('event-recorder', propagate=False) as log_capture:
             import_handler.import_events(self.__create_s3_event(), None)
 
-            self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1')], MINIMUM_LEVEL_OF_ASSURANCE)
-            self.__assert_audit_events_table_has_fraud_event_records([('sample-id-3', 'session-id-3', 'fraud-event-id-1')])
+            self.__assert_audit_events_table_has_billing_event_records(
+                [('sample-id-1', 'session-id-1')], MINIMUM_LEVEL_OF_ASSURANCE)
+            self.__assert_audit_events_table_has_fraud_event_records(
+                [('sample-id-3', 'session-id-3', 'fraud-event-id-1')])
             self.__assert_billing_events_table_has_billing_event_records(['session-id-1'])
             self.__assert_fraud_events_table_has_fraud_event_records([('session-id-3', 'fraud-event-id-1')])
             log_capture.check(
@@ -271,10 +276,10 @@ class ImportHandlerTest(TestCase):
 
     def __setup_db_connection_string(self, password_in_env=False):
         if password_in_env:
-          os.environ['DB_CONNECTION_STRING'] = self.db_connection_string
-          os.environ['ENCRYPTED_DATABASE_PASSWORD'] = self.__encrypt(DB_PASSWORD)
+            os.environ['DB_CONNECTION_STRING'] = self.db_connection_string
+            os.environ['ENCRYPTED_DATABASE_PASSWORD'] = self.__encrypt(DB_PASSWORD)
         else:
-          os.environ['DB_CONNECTION_STRING'] = "{} password='{}'".format(self.db_connection_string, DB_PASSWORD)
+            os.environ['DB_CONNECTION_STRING'] = "{} password='{}'".format(self.db_connection_string, DB_PASSWORD)
 
     def __setup_kms(self):
         self.__kms_client = boto3.client('kms')
@@ -375,16 +380,16 @@ class ImportHandlerTest(TestCase):
 
     def __create_s3_event(self):
         return {
-          "Records": [
-            {
-              "s3": {
-                "bucket": {
-                  "name": IMPORT_BUCKET_NAME,
-                },
-                "object": {
-                  "key": IMPORT_FILE_NAME,
+            "Records": [
+                {
+                    "s3": {
+                        "bucket": {
+                            "name": IMPORT_BUCKET_NAME,
+                        },
+                        "object": {
+                            "key": IMPORT_FILE_NAME,
+                        }
+                    }
                 }
-              }
-            }
-          ]
+            ]
         }

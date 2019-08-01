@@ -69,7 +69,7 @@ def store_queued_events(_, __):
                 logger.info('Stored fraud event: {0}'.format(event.event_id))
             delete_message(sqs_client, queue_url, message)
             logger.info('Deleted event from queue with ID: {0}'.format(event.event_id))
-        except Exception as exception:
+        except Exception:
             if event:
                 logger.exception(
                     'Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format(event.event_id,

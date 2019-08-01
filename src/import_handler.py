@@ -23,7 +23,8 @@ def import_events(event, __):
         database_password = decrypt(os.environ['ENCRYPTED_DATABASE_PASSWORD']).decode()
     else:
         dsn_components = parse_dsn(dsn)
-        database_password = boto3.client('rds').generate_db_auth_token(dsn_components['host'], 5432, dsn_components['user'])
+        database_password = boto3.client('rds').generate_db_auth_token(
+            dsn_components['host'], 5432, dsn_components['user'])
 
     db_connection = create_db_connection(dsn, database_password)
     logger.info('Created connection to DB')
@@ -40,9 +41,11 @@ def import_events(event, __):
                 event = event_from_json_object(message_envelope['document'])
 
                 if write_audit_event_to_database(event, db_connection):
-                    if event.event_type == 'session_event' and event.details.get('session_event_type') == 'idp_authn_succeeded':
+                    if (event.event_type == 'session_event'
+                            and event.details.get('session_event_type') == 'idp_authn_succeeded'):
                         write_billing_event_to_database(event, db_connection)
-                    if event.event_type == 'session_event' and event.details.get('session_event_type') == 'fraud_detected':
+                    if (event.event_type == 'session_event'
+                            and event.details.get('session_event_type') == 'fraud_detected'):
                         write_fraud_event_to_database(event, db_connection)
 
             except Exception as exception:
