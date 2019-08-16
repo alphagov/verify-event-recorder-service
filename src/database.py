@@ -1,6 +1,5 @@
 import json
 import psycopg2
-import os
 from datetime import datetime
 
 from psycopg2._psycopg import IntegrityError
@@ -49,7 +48,9 @@ def write_audit_event_to_database(event, db_connection):
         if integrityError.pgcode == UNIQUE_VIOLATION:
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
-            getLogger('event-recorder').warning('Failed to store an audit event. The Event ID {0} already exists in the database'.format(event.event_id))
+            getLogger('event-recorder').warning(
+                'Failed to store an audit event. The Event ID {0} already exists in the database'.format(
+                    event.event_id))
             return False
         else:
             raise integrityError
@@ -89,15 +90,19 @@ def write_billing_event_to_database(event, db_connection):
                 event.details['transaction_entity_id']
             ])
     except KeyError as keyError:
-        getLogger('event-recorder').warning('Failed to store a billing event [Event ID {0}] due to key error'.format(event.event_id))
+        getLogger('event-recorder').warning(
+            'Failed to store a billing event [Event ID {0}] due to key error'.format(event.event_id))
         raise keyError
     except IntegrityError as integrityError:
         if integrityError.pgcode == UNIQUE_VIOLATION:
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
-            getLogger('event-recorder').warning('Failed to store a billing event. The Event ID {0} already exists in the database'.format(event.event_id))
+            getLogger('event-recorder').warning(
+                'Failed to store a billing event. The Event ID {0} already exists in the database'.format(
+                    event.event_id))
         else:
-            getLogger('event-recorder').warning('Failed to store a billing event [Event ID {0}] due to integrity error'.format(event.event_id))
+            getLogger('event-recorder').warning(
+                'Failed to store a billing event [Event ID {0}] due to integrity error'.format(event.event_id))
             raise integrityError
 
 
@@ -119,8 +124,10 @@ def write_fraud_event_to_database(event, db_connection):
                 event.details['gpg45_status']
             ])
     except KeyError as keyError:
-        getLogger('event-recorder').warning('Failed to store a fraud event [Event ID {0}] due to key error'.format(event.event_id))
+        getLogger('event-recorder').warning(
+            'Failed to store a fraud event [Event ID {0}] due to key error'.format(event.event_id))
         raise keyError
     except IntegrityError as integrityError:
-        getLogger('event-recorder').warning('Failed to store a fraud event [Event ID {0}] due to integrity error'.format(event.event_id))
+        getLogger('event-recorder').warning(
+            'Failed to store a fraud event [Event ID {0}] due to integrity error'.format(event.event_id))
         raise integrityError

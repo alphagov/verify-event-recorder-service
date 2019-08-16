@@ -118,6 +118,7 @@ def valid_message_object():
         }
     }
 
+
 def import_message_object():
     return {
         'eventId': EVENT_ID,
@@ -130,6 +131,7 @@ def import_message_object():
         }
     }
 
+
 def valid_error_message_object_without_session_id():
     return {
         'eventId': EVENT_ID,
@@ -140,6 +142,7 @@ def valid_error_message_object_without_session_id():
             'session_event_type': SESSION_EVENT_TYPE
         }
     }
+
 
 def valid_error_message_object_with_session_id():
     return {

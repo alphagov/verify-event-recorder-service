@@ -4,6 +4,7 @@ WORKDIR /install
 COPY requirements/ requirements/
 RUN python3 -m pip install -r requirements/dev.txt
 
+COPY .flake8 .flake8
 COPY src src
 COPY test test
 

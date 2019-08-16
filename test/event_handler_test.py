@@ -15,7 +15,7 @@ from src.database import RunInTransaction
 from test.test_encrypter import encrypt_string
 
 EVENT_TYPE = 'session_event'
-TIMESTAMP = 1518264452000 # '2018-02-10 12:07:32'
+TIMESTAMP = 1518264452000  # '2018-02-10 12:07:32'
 ORIGINATING_SERVICE = 'test service'
 ENCRYPTION_KEY = b'sixteen byte key'
 DB_PASSWORD = 'secretPassword'
@@ -27,8 +27,9 @@ TRANSACTION_ENTITY_ID = 'transaction entity id'
 MINIMUM_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 PROVIDED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 REQUIRED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
-FRAUD_SESSION_EVENT_TYPE='fraud_detected'
-GPG45_STATUS='AA01'
+FRAUD_SESSION_EVENT_TYPE = 'fraud_detected'
+GPG45_STATUS = 'AA01'
+
 
 @mock_sqs
 @mock_s3
@@ -73,10 +74,14 @@ class EventHandlerTest(TestCase):
 
         event_handler.store_queued_events(None, None)
 
-        self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
-        self.__assert_audit_events_table_has_fraud_event_records([('sample-id-3', 'session-id-3', 'fraud-event-id-1'), ('sample-id-4', 'session-id-4', 'fraud-event-id-2')])
-        self.__assert_billing_events_table_has_billing_event_records([('session-id-1', 'sample-id-1'), ('session-id-2','sample-id-2')])
-        self.__assert_fraud_events_table_has_fraud_event_records([('session-id-3', 'fraud-event-id-1'), ('session-id-4', 'fraud-event-id-2')])
+        self.__assert_audit_events_table_has_billing_event_records(
+            [('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+        self.__assert_audit_events_table_has_fraud_event_records(
+            [('sample-id-3', 'session-id-3', 'fraud-event-id-1'), ('sample-id-4', 'session-id-4', 'fraud-event-id-2')])
+        self.__assert_billing_events_table_has_billing_event_records(
+            [('session-id-1', 'sample-id-1'), ('session-id-2', 'sample-id-2')])
+        self.__assert_fraud_events_table_has_fraud_event_records(
+            [('session-id-3', 'fraud-event-id-1'), ('session-id-4', 'fraud-event-id-2')])
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
 
@@ -91,9 +96,11 @@ class EventHandlerTest(TestCase):
 
         event_handler.store_queued_events(None, None)
 
-        self.__assert_audit_events_table_has_fraud_event_records([('sample-id-1', 'session-id-1', 'fraud-event-id-1'), ('sample-id-2', 'session-id-2', 'fraud-event-id-2')])
+        self.__assert_audit_events_table_has_fraud_event_records(
+            [('sample-id-1', 'session-id-1', 'fraud-event-id-1'), ('sample-id-2', 'session-id-2', 'fraud-event-id-2')])
         self.__assert_billing_events_table_has_no_billing_event_records
-        self.__assert_fraud_events_table_has_fraud_event_records([('session-id-1', 'fraud-event-id-1'), ('session-id-2', 'fraud-event-id-2')])
+        self.__assert_fraud_events_table_has_fraud_event_records(
+            [('session-id-1', 'fraud-event-id-1'), ('session-id-2', 'fraud-event-id-2')])
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
 
@@ -108,8 +115,10 @@ class EventHandlerTest(TestCase):
 
         event_handler.store_queued_events(None, None)
 
-        self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
-        self.__assert_billing_events_table_has_billing_event_records([('session-id-1', 'sample-id-1'), ('session-id-2','sample-id-2')])
+        self.__assert_audit_events_table_has_billing_event_records(
+            [('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+        self.__assert_billing_events_table_has_billing_event_records(
+            [('session-id-1', 'sample-id-1'), ('session-id-2', 'sample-id-2')])
         self.__assert_fraud_events_table_has_no_fraud_event_records
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
@@ -126,8 +135,10 @@ class EventHandlerTest(TestCase):
 
         event_handler.store_queued_events(None, None)
 
-        self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
-        self.__assert_billing_events_table_has_billing_event_records([('session-id-1', 'sample-id-1'), ('session-id-2','sample-id-2')])
+        self.__assert_audit_events_table_has_billing_event_records(
+            [('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+        self.__assert_billing_events_table_has_billing_event_records(
+            [('session-id-1', 'sample-id-1'), ('session-id-2', 'sample-id-2')])
 
     def test_writes_incomplete_billing_event_to_audit_events_table_but_not_to_billing_events_table(self):
         self.__setup_s3()
@@ -149,8 +160,11 @@ class EventHandlerTest(TestCase):
                 ('event-recorder', 'INFO', 'Created connection to DB'),
                 ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
                 ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
-                ('event-recorder', 'WARNING', 'Failed to store a billing event [Event ID sample-id-1] due to key error'),
-                ('event-recorder', 'ERROR', 'Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format('sample-id-1', EVENT_TYPE, message_ids[0])),
+                ('event-recorder', 'WARNING',
+                    'Failed to store a billing event [Event ID sample-id-1] due to key error'),
+                ('event-recorder', 'ERROR',
+                    'Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format(
+                        'sample-id-1', EVENT_TYPE, message_ids[0])),
                 ('event-recorder', 'INFO', 'Queue is empty - finishing after 1 events')
             )
             self.assertEqual(self.__number_of_visible_messages(), '0')
@@ -177,7 +191,9 @@ class EventHandlerTest(TestCase):
                 ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
                 ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
                 ('event-recorder', 'WARNING', 'Failed to store a fraud event [Event ID sample-id-1] due to key error'),
-                ('event-recorder', 'ERROR', 'Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format('sample-id-1', EVENT_TYPE, message_ids[0])),
+                ('event-recorder', 'ERROR',
+                    'Failed to store event {0}, event type "{1}" from SQS message ID {2}'.format(
+                        'sample-id-1', EVENT_TYPE, message_ids[0])),
                 ('event-recorder', 'INFO', 'Queue is empty - finishing after 1 events')
             )
             self.assertEqual(self.__number_of_visible_messages(), '0')
@@ -195,7 +211,8 @@ class EventHandlerTest(TestCase):
 
             event_handler.store_queued_events(None, None)
 
-            self.__assert_audit_events_table_has_billing_event_records([('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
+            self.__assert_audit_events_table_has_billing_event_records(
+                [('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
             self.__assert_billing_events_table_has_billing_event_records([('session-id-2', 'sample-id-2')])
             self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
@@ -224,7 +241,8 @@ class EventHandlerTest(TestCase):
 
             event_handler.store_queued_events(None, None)
 
-            self.__assert_audit_events_table_has_billing_event_records([('sample-id-1', 'session-id-1')], MINIMUM_LEVEL_OF_ASSURANCE)
+            self.__assert_audit_events_table_has_billing_event_records(
+                [('sample-id-1', 'session-id-1')], MINIMUM_LEVEL_OF_ASSURANCE)
             self.__assert_billing_events_table_has_billing_event_records([('session-id-1', 'sample-id-1')])
             self.__assert_fraud_events_table_has_no_fraud_event_records
             log_capture.check(
@@ -236,11 +254,11 @@ class EventHandlerTest(TestCase):
                 ('event-recorder', 'INFO', 'Stored billing event: sample-id-1'),
                 ('event-recorder', 'INFO', 'Deleted event from queue with ID: sample-id-1'),
                 ('event-recorder', 'INFO', 'Decrypted event with ID: sample-id-1'),
-                ('event-recorder', 'WARNING', 'Failed to store an audit event. The Event ID sample-id-1 already exists in the database'),
+                ('event-recorder', 'WARNING',
+                    'Failed to store an audit event. The Event ID sample-id-1 already exists in the database'),
                 ('event-recorder', 'INFO', 'Stored audit event: sample-id-1'),
-                ('event-recorder',
-                 'WARNING',
-                 'Failed to store a billing event. The Event ID sample-id-1 already exists in the database'),
+                ('event-recorder', 'WARNING',
+                    'Failed to store a billing event. The Event ID sample-id-1 already exists in the database'),
                 ('event-recorder', 'INFO', 'Stored billing event: sample-id-1'),
                 ('event-recorder', 'INFO', 'Deleted event from queue with ID: sample-id-1'),
                 ('event-recorder', 'INFO', 'Queue is empty - finishing after 2 events')
@@ -445,10 +463,10 @@ class EventHandlerTest(TestCase):
 
     def __setup_db_connection_string(self, password_in_env=False):
         if password_in_env:
-          os.environ['DB_CONNECTION_STRING'] = self.db_connection_string
-          os.environ['ENCRYPTED_DATABASE_PASSWORD'] = self.__encrypt(DB_PASSWORD)
+            os.environ['DB_CONNECTION_STRING'] = self.db_connection_string
+            os.environ['ENCRYPTED_DATABASE_PASSWORD'] = self.__encrypt(DB_PASSWORD)
         else:
-          os.environ['DB_CONNECTION_STRING'] = "{} password='{}'".format(self.db_connection_string, DB_PASSWORD)
+            os.environ['DB_CONNECTION_STRING'] = "{} password='{}'".format(self.db_connection_string, DB_PASSWORD)
 
     def __setup_sqs(self):
         self.__sqs_client = boto3.client('sqs')
@@ -521,6 +539,7 @@ def create_event_string(event_id, session_id):
         }
     })
 
+
 def create_billing_event_without_minimum_level_of_assurance_string(event_id, session_id):
     return json.dumps({
         'eventId': event_id,
@@ -556,6 +575,7 @@ def create_fraud_event_string(event_id, session_id, fraud_event_id):
             'gpg45_status': GPG45_STATUS
         }
     })
+
 
 def create_fraud_event_without_idp_fraud_event_id_string(event_id, session_id):
     return json.dumps({
