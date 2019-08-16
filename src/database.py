@@ -112,6 +112,7 @@ def write_fraud_event_to_database(event, db_connection):
             cursor.execute("""
                 INSERT INTO billing.fraud_events
                 (
+                    event_id,
                     time_stamp,
                     session_id,
                     hashed_persistent_id,
@@ -119,12 +120,12 @@ def write_fraud_event_to_database(event, db_connection):
                     entity_id,
                     fraud_event_id,
                     fraud_indicator,
-                    event_id,
                     transaction_entity_id
                 )
                 VALUES
                 (%s, %s, %s, %s, %s, %s, %s, %s, %s);
             """, [
+                event.event_id,
                 datetime.fromtimestamp(int(event.timestamp) / 1e3),
                 event.session_id,
                 event.details['pid'],
@@ -132,7 +133,6 @@ def write_fraud_event_to_database(event, db_connection):
                 event.details['idp_entity_id'],
                 event.details['idp_fraud_event_id'],
                 event.details['gpg45_status'],
-                event.event_id,
                 event.details['transaction_entity_id']
             ])
     except KeyError as keyError:

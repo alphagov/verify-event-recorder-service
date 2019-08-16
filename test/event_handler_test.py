@@ -81,7 +81,7 @@ class EventHandlerTest(TestCase):
         self.__assert_audit_events_table_has_fraud_event_records(
             [(event_id_3, 'session-id-3', 'fraud-event-id-1'), (event_id_4, 'session-id-4', 'fraud-event-id-2')])
         self.__assert_billing_events_table_has_billing_event_records(
-            [('session-id-1', 'sample-id-1'), ('session-id-2','sample-id-2')])
+            [('session-id-1', 'sample-id-1'), ('session-id-2', 'sample-id-2')])
         self.__assert_fraud_events_table_has_fraud_event_records(
             [(event_id_3, 'session-id-3', 'fraud-event-id-1'), (event_id_4, 'session-id-4', 'fraud-event-id-2')])
         self.assertEqual(self.__number_of_visible_messages(), '0')
