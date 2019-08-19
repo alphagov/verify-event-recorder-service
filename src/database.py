@@ -111,23 +111,41 @@ def write_fraud_event_to_database(event, db_connection):
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""
                 INSERT INTO billing.fraud_events
-                (time_stamp, session_id, hashed_persistent_id, request_id, entity_id, fraud_event_id, fraud_indicator)
+                (
+                    event_id,
+                    time_stamp,
+                    session_id,
+                    hashed_persistent_id,
+                    request_id,
+                    entity_id,
+                    fraud_event_id,
+                    fraud_indicator,
+                    transaction_entity_id
+                )
                 VALUES
-                (%s, %s, %s, %s, %s, %s, %s);
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s);
             """, [
+                event.event_id,
                 datetime.fromtimestamp(int(event.timestamp) / 1e3),
                 event.session_id,
                 event.details['pid'],
                 event.details['request_id'],
                 event.details['idp_entity_id'],
                 event.details['idp_fraud_event_id'],
-                event.details['gpg45_status']
+                event.details['gpg45_status'],
+                event.details['transaction_entity_id']
             ])
     except KeyError as keyError:
         getLogger('event-recorder').warning(
             'Failed to store a fraud event [Event ID {0}] due to key error'.format(event.event_id))
         raise keyError
     except IntegrityError as integrityError:
-        getLogger('event-recorder').warning(
-            'Failed to store a fraud event [Event ID {0}] due to integrity error'.format(event.event_id))
-        raise integrityError
+        if integrityError.pgcode == UNIQUE_VIOLATION:
+            # The event has already been recorded - don't throw an exception (no need to retry this message), just
+            # log a notification and move on.
+            getLogger('event-recorder').warning(
+                'Failed to store a fraud event. The Event ID {0} already exists in the database'.format(event.event_id))
+        else:
+            getLogger('event-recorder').warning(
+                'Failed to store a fraud event [Event ID {0}] due to integrity error'.format(event.event_id))
+            raise integrityError

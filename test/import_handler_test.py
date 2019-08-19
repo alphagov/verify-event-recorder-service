@@ -373,7 +373,8 @@ class ImportHandlerTest(TestCase):
                     'request_id': REQUEST_ID,
                     'idp_entity_id': IDP_ENTITY_ID,
                     'idp_fraud_event_id': fraud_event_id,
-                    'gpg45_status': GPG45_STATUS
+                    'gpg45_status': GPG45_STATUS,
+                    'transaction_entity_id': TRANSACTION_ENTITY_ID
                 }
             }
         })

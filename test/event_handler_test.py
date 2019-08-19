@@ -63,12 +63,14 @@ class EventHandlerTest(TestCase):
 
     def test_reads_messages_from_queue_with_key_from_s3(self):
         self.__setup_s3()
+        event_id_3 = str(uuid.uuid4())
+        event_id_4 = str(uuid.uuid4())
         self.__encrypt_and_send_to_sqs(
             [
                 create_event_string('sample-id-1', 'session-id-1'),
                 create_event_string('sample-id-2', 'session-id-2'),
-                create_fraud_event_string('sample-id-3', 'session-id-3', 'fraud-event-id-1'),
-                create_fraud_event_string('sample-id-4', 'session-id-4', 'fraud-event-id-2'),
+                create_fraud_event_string(event_id_3, 'session-id-3', 'fraud-event-id-1'),
+                create_fraud_event_string(event_id_4, 'session-id-4', 'fraud-event-id-2'),
             ]
         )
 
@@ -77,30 +79,32 @@ class EventHandlerTest(TestCase):
         self.__assert_audit_events_table_has_billing_event_records(
             [('sample-id-1', 'session-id-1'), ('sample-id-2', 'session-id-2')], MINIMUM_LEVEL_OF_ASSURANCE)
         self.__assert_audit_events_table_has_fraud_event_records(
-            [('sample-id-3', 'session-id-3', 'fraud-event-id-1'), ('sample-id-4', 'session-id-4', 'fraud-event-id-2')])
+            [(event_id_3, 'session-id-3', 'fraud-event-id-1'), (event_id_4, 'session-id-4', 'fraud-event-id-2')])
         self.__assert_billing_events_table_has_billing_event_records(
             [('session-id-1', 'sample-id-1'), ('session-id-2', 'sample-id-2')])
         self.__assert_fraud_events_table_has_fraud_event_records(
-            [('session-id-3', 'fraud-event-id-1'), ('session-id-4', 'fraud-event-id-2')])
+            [(event_id_3, 'session-id-3', 'fraud-event-id-1'), (event_id_4, 'session-id-4', 'fraud-event-id-2')])
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
 
     def test_reads_fraud_events_from_queue(self):
         self.__setup_s3()
+        event_id_1 = str(uuid.uuid4())
+        event_id_2 = str(uuid.uuid4())
         self.__encrypt_and_send_to_sqs(
             [
-                create_fraud_event_string('sample-id-1', 'session-id-1', 'fraud-event-id-1'),
-                create_fraud_event_string('sample-id-2', 'session-id-2', 'fraud-event-id-2'),
+                create_fraud_event_string(event_id_1, 'session-id-1', 'fraud-event-id-1'),
+                create_fraud_event_string(event_id_2, 'session-id-2', 'fraud-event-id-2'),
             ]
         )
 
         event_handler.store_queued_events(None, None)
 
         self.__assert_audit_events_table_has_fraud_event_records(
-            [('sample-id-1', 'session-id-1', 'fraud-event-id-1'), ('sample-id-2', 'session-id-2', 'fraud-event-id-2')])
+            [(event_id_1, 'session-id-1', 'fraud-event-id-1'), (event_id_2, 'session-id-2', 'fraud-event-id-2')])
         self.__assert_billing_events_table_has_no_billing_event_records
         self.__assert_fraud_events_table_has_fraud_event_records(
-            [('session-id-1', 'fraud-event-id-1'), ('session-id-2', 'fraud-event-id-2')])
+            [(event_id_1, 'session-id-1', 'fraud-event-id-1'), (event_id_2, 'session-id-2', 'fraud-event-id-2')])
         self.assertEqual(self.__number_of_visible_messages(), '0')
         self.assertEqual(self.__number_of_hidden_messages(), '0')
 
@@ -444,22 +448,24 @@ class EventHandlerTest(TestCase):
                         request_id,
                         entity_id,
                         fraud_event_id,
-                        fraud_indicator
+                        fraud_indicator,
+                        transaction_entity_id
                     FROM
                         billing.fraud_events
                     WHERE
-                        session_id = %s;
+                        event_id = %s;
                 """, [fraud_event[0]])
                 matching_records = cursor.fetchone()
 
             self.assertIsNotNone(matching_records)
             self.assertEqual(matching_records[0], datetime.fromtimestamp(TIMESTAMP / 1e3))
-            self.assertEqual(matching_records[1], fraud_event[0])
+            self.assertEqual(matching_records[1], fraud_event[1])
             self.assertEqual(matching_records[2], PID)
             self.assertEqual(matching_records[3], REQUEST_ID)
             self.assertEqual(matching_records[4], IDP_ENTITY_ID)
-            self.assertEqual(matching_records[5], fraud_event[1])
+            self.assertEqual(matching_records[5], fraud_event[2])
             self.assertEqual(matching_records[6], GPG45_STATUS)
+            self.assertEqual(matching_records[7], TRANSACTION_ENTITY_ID)
 
     def __setup_db_connection_string(self, password_in_env=False):
         if password_in_env:
@@ -572,7 +578,8 @@ def create_fraud_event_string(event_id, session_id, fraud_event_id):
             'request_id': REQUEST_ID,
             'idp_entity_id': IDP_ENTITY_ID,
             'idp_fraud_event_id': fraud_event_id,
-            'gpg45_status': GPG45_STATUS
+            'gpg45_status': GPG45_STATUS,
+            'transaction_entity_id': TRANSACTION_ENTITY_ID
         }
     })
 
@@ -589,6 +596,7 @@ def create_fraud_event_without_idp_fraud_event_id_string(event_id, session_id):
             'pid': PID,
             'request_id': REQUEST_ID,
             'idp_entity_id': IDP_ENTITY_ID,
-            'gpg45_status': GPG45_STATUS
+            'gpg45_status': GPG45_STATUS,
+            'transaction_entity_id': TRANSACTION_ENTITY_ID
         }
     })
