@@ -226,6 +226,7 @@ def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, cursor, l
                       FROM billing.fraud_events
                      WHERE fraud_event_id = %(idp_event_id)s
                        AND entity_id = %(idp_entity_id)s
+                     LIMIT 1
                 ),
                 %(session_id)s
              )
