@@ -42,5 +42,7 @@ def move_file(bucket_name, filename, new_prefix):
 
     s3_client.copy_object(Bucket=bucket_name,
                           CopySource=f'{bucket_name}/{filename}',
-                          Key=f'{new_prefix}/{new_filename}')
+                          Key=f'{new_prefix}/{new_filename}',
+                          TaggingDirective="COPY",
+                          ServerSideEncryption="AES256")
     s3_client.delete_object(Bucket=bucket_name, Key=filename)

@@ -182,19 +182,17 @@ def write_import_session(upload_session, db_connection, logger):
             return upload_session
 
     except KeyError as keyError:
-        logger.warning(
-            'Failed to store upload session {} due to key error'.format(upload_session.id))
+        logger.exception(
+            'Failed to store upload session for file {}, idp = {} due to key error'.format(
+                upload_session.source_file_name, upload_session.idp_entity_id)
+        )
         raise keyError
     except IntegrityError as integrityError:
-        if integrityError.pgcode == UNIQUE_VIOLATION:
-            # The event has already been recorded - don't throw an exception (no need to retry this message), just
-            # log a notification and move on.
-            logger.warning(
-                'Failed to store a upload session. The ID {0} already exists in the database'.format(upload_session.id))
-        else:
-            logger.warning(
-                'Failed to store a upload session [ID {0}] due to integrity error'.format(upload_session.id))
-            raise integrityError
+        logger.exception(
+            'Failed to store upload session for file {}, idp = {} due to integrity error'.format(
+                upload_session.source_file_name, upload_session.idp_entity_id)
+        )
+        raise integrityError
 
 
 def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, db_connection, logger):
@@ -269,25 +267,16 @@ def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, db_connec
             return result[1]
 
     except KeyError as keyError:
-        logger.warning(
+        logger.exception(
             'Failed to store an IDP fraud event [Event ID {}] due to key error'.format(idp_fraud_event.idp_event_id))
         raise keyError
     except IntegrityError as integrityError:
-        if integrityError.pgcode == UNIQUE_VIOLATION:
-            # The event has already been recorded - don't throw an exception (no need to retry this message), just
-            # log a notification and move on.
-            logger.warning(
-                'Failed to store an IDP fraud event. The Event ID {} already exists in the database'.format(
-                    idp_fraud_event.idp_event_id
-                )
+        logger.exception(
+            'Failed to store an IDP fraud event [Event ID {}] due to integrity error'.format(
+                idp_fraud_event.idp_event_id
             )
-        else:
-            logger.warning(
-                'Failed to store an IDP fraud event [Event ID {}] due to integrity error'.format(
-                    idp_fraud_event.idp_event_id
-                )
-            )
-            raise integrityError
+        )
+        raise integrityError
 
 
 def update_session_as_validated(upload_session, db_connection):

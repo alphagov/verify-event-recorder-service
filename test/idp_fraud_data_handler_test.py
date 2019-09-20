@@ -510,6 +510,44 @@ class IdpFraudDataHandlerTest(TestCase):
             self.__assert_events_exist_in_database(idp_fraud_events)
             self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.SUCCESS_FOLDER)
 
+    def test_handles_empty_contra_indicators_and_scores(self):
+        idp_fraud_events = self.__generate_test_idp_fraud_events()
+        self.__write_import_file_to_s3(idp_fraud_events, ",", [
+            '2019-01-20T18:30:15.1110000Z,5555555,DF01,,,_req5555555,111.111.111.111,pid5555555',
+            '2019-01-31T16:26:03.2220000Z,6666666,IT01,  ,  ,_req6666666,222.222.222.222,pid6666666',
+        ])
+        additional_events = [
+            IdpFraudEvent(
+                timestamp="2019-01-20T18:30:15.1110000Z",
+                idp_event_id="5555555",
+                idp_entity_id=IDP_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=[],
+                contra_score=0,
+                request_id="_req5555555",
+                client_ip_address="111.111.111.111",
+                pid="pid5555555"
+            ),
+            IdpFraudEvent(
+                timestamp="2019-01-31T16:26:03.2220000Z",
+                idp_event_id="6666666",
+                idp_entity_id=IDP_ENTITY_ID,
+                fid_code="IT01",
+                contra_indicators=[],
+                contra_score=0,
+                request_id="_req6666666",
+                client_ip_address="222.222.222.222",
+                pid="pid6666666"
+            )
+        ]
+        with LogCapture('idp_fraud_data_handler', propagate=False):
+            idp_fraud_data_handler.idp_fraud_data_events(self.__create_s3_event(), None)
+
+            self.__assert_upload_session_exists_in_database(True)
+            self.__assert_events_exist_in_database(idp_fraud_events+additional_events)
+            self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.SUCCESS_FOLDER)
+
+
     @parameterized.expand([
         ["comma", ","],
         ["lf", "\n"],
@@ -623,7 +661,7 @@ class IdpFraudDataHandlerTest(TestCase):
                     self.assertEqual(result[9], event_id)
 
                 if event.contra_indicators:
-                    contra_indicators = list(set(event.contra_indicators.copy()))
+                    contra_indicators = list(set(event.contra_indicators))
                     contra_indicators.sort()
                     cursor.execute("""
                         SELECT

@@ -15,13 +15,13 @@ from src.upload_session import UploadSession
 SUCCESS_FOLDER = 'success'
 ERROR_FOLDER = 'error'
 DEFAULT_TIMEZONE = 'Europe/London'
-DEFAULT_SKIP_HEADER = True
+DEFAULT_HAS_HEADER = True
 DEFAULT_DIALECT = 'excel'
 logger = logging.getLogger('idp_fraud_data_handler')
 logger.setLevel(logging.INFO)
 
 
-def create_import_session(bucket, filename, idp_entity_id, userid, db_connection):
+def create_import_session(filename, idp_entity_id, userid, db_connection):
     upload_session = UploadSession(
         source_file_name=filename,
         idp_entity_id=idp_entity_id,
@@ -31,14 +31,14 @@ def create_import_session(bucket, filename, idp_entity_id, userid, db_connection
 
 
 def process_file(bucket, filename, upload_session, db_connection,
-                 skip_header=DEFAULT_SKIP_HEADER, dialect=DEFAULT_DIALECT, timezone=DEFAULT_TIMEZONE):
+                 has_header=DEFAULT_HAS_HEADER, dialect=DEFAULT_DIALECT, timezone=DEFAULT_TIMEZONE):
     logger.info('Processing data for IDP {}'.format(upload_session.idp_entity_id))
 
     temp_file = download_import_file(bucket, filename)
     with open(temp_file, newline='') as csvfile:
         reader = csv.reader(csvfile, dialect=dialect)
         errors_occurred = False
-        skip_row = skip_header
+        skip_row = has_header
         row_number = 0
 
         for row in reader:
@@ -78,8 +78,8 @@ def parse_line(row, idp_entity_id, timezone=DEFAULT_TIMEZONE):
         timestamp=dateparser.parse(row[0], settings={'TIMEZONE': timezone}),
         idp_event_id=row[1],
         fid_code=row[2],
-        contra_indicators=re.split(',|\n|\r\n', row[3]),
-        contra_score=row[4],
+        contra_indicators=re.split(',|\n|\r\n', row[3]) if row[3].strip() else [],
+        contra_score=row[4] if row[4].strip() else 0,
         request_id=row[5],
         client_ip_address=row[6],
         pid=row[7]
@@ -110,17 +110,17 @@ def idp_fraud_data_events(event, __):
 
         timezone = DEFAULT_TIMEZONE
         dialect = DEFAULT_DIALECT
-        skip_header = DEFAULT_SKIP_HEADER
+        has_header = DEFAULT_HAS_HEADER
 
         if 'timezone' in tags:
             timezone = tags['timezone']
         if 'dialect' in tags:
             dialect = tags['dialect']
-        if 'skip_header' in tags:
-            skip_header = tags['skip_header'].lower() in ['true', '1', 'y', 'yes']
+        if 'has_header' in tags:
+            has_header = tags['has_header'].lower() in ['true', '1', 'y', 'yes']
 
-        upload_session = create_import_session(bucket, filename, idp_entity_id, username, db_connection)
-        if process_file(bucket, filename, upload_session, db_connection, skip_header, dialect, timezone):
+        upload_session = create_import_session(filename, idp_entity_id, username, db_connection)
+        if process_file(bucket, filename, upload_session, db_connection, has_header, dialect, timezone):
             logger.info("Processing successful")
             update_session_as_validated(upload_session, db_connection)
             move_to_success(bucket, filename)
