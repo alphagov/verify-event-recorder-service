@@ -19,9 +19,12 @@ def fetch_import_file(bucket_name, filename):
 
 
 def download_import_file(bucket_name, filename):
-    temp_file_name = tempfile.mktemp()
     s3_client = boto3.client('s3')
-    s3_client.download_file(bucket_name, filename, temp_file_name)
+    fd, temp_file_name = tempfile.mkstemp()
+    with open(temp_file_name, 'wb') as data:
+        s3_client.download_fileobj(bucket_name, filename, data)
+
+    os.close(fd)
     return temp_file_name
 
 

@@ -69,6 +69,7 @@ def process_file(bucket, filename, upload_session, db_connection,
                 write_upload_error(upload_session, row_number, '**Row Exception**', message, db_connection)
                 errors_occurred = True
 
+    os.remove(temp_file)
     return not errors_occurred
 
 
