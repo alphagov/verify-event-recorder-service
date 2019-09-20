@@ -14,7 +14,7 @@ from testfixtures import LogCapture
 from src import idp_fraud_data_handler, database, event_mapper
 from src.database import RunInTransaction
 from src.idp_fraud_event import IdpFraudEvent
-from test.helpers import IDP_ENTITY_ID, clean_db, create_fraud_event_string, file_exists_in_s3, setup_stub_aws_config, \
+from test.helpers import IDP_ENTITY_ID, clean_db, file_exists_in_s3, setup_stub_aws_config, \
     DB_PASSWORD
 
 UPLOAD_BUCKET_NAME = 's3-idp-fraud-data-bucket'
@@ -42,7 +42,7 @@ class IdpFraudDataHandlerTest(TestCase):
         cls.db_connection = psycopg2.connect(cls.db_connection_string)
 
     def setUp(self):
-        setup_stub_aws_config
+        setup_stub_aws_config()
         self.__setup_s3()
         self.__setup_db_connection_string()
 
