@@ -237,7 +237,21 @@ def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection):
             ])
 
             result = cursor.fetchone()
-            return result[0];
+            id = result[0];
+
+            for contra_indicator in idp_fraud_event.contra_indicators:
+                cursor.execute("""
+                    INSERT INTO idp_data.idp_fraud_event_contraindicators
+                    (
+                        idp_fraud_events_id,
+                        contraindicator_code
+                    )
+                    VALUES
+                    (
+                        %s,
+                        %s
+                    )
+                """, [id, contra_indicator])
 
     except KeyError as keyError:
         getLogger('event-recorder').warning(

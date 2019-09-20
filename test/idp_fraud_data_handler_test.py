@@ -150,20 +150,22 @@ class IdpFraudDataHandlerTest(TestCase):
             for event in idp_fraud_events:
                 cursor.execute("""
                     SELECT 
-                        id,
-                        idp_entity_id,
-                        idp_event_id,
-                        time_stamp,
-                        fid_code,
-                        request_id,
-                        pid,
-                        client_ip_address,
-                        contra_score,
-                        event_id,
-                        upload_session_id
-                      FROM idp_data.idp_fraud_events
-                     WHERE idp_entity_id = %s 
-                       AND idp_event_id = %s
+                        a.id,
+                        a.idp_entity_id,
+                        a.idp_event_id,
+                        a.time_stamp,
+                        a.fid_code,
+                        a.request_id,
+                        a.pid,
+                        a.client_ip_address,
+                        a.contra_score,
+                        a.event_id,
+                        a.upload_session_id,
+                        b.source_file_name
+                      FROM idp_data.idp_fraud_events a
+                     INNER JOIN idp_data.upload_sessions b ON a.upload_session_id = b.id
+                     WHERE a.idp_entity_id = %s 
+                       AND a.idp_event_id = %s
                 """, [event.idp_entity_id, event.idp_event_id])
                 result = cursor.fetchone()
 
@@ -176,6 +178,23 @@ class IdpFraudDataHandlerTest(TestCase):
                 self.assertEqual(result[7], event.client_ip_address)
                 self.assertEqual(result[8], event.contra_score)
                 self.assertIsNotNone(result[10])
+                self.assertEqual(result[11], IMPORT_FILE_NAME)
+
+                if event.contra_indicators:
+                    contra_indicators = event.contra_indicators.copy()
+                    contra_indicators.sort()
+                    cursor.execute("""
+                        SELECT
+                            contraindicator_code
+                          FROM
+                            idp_data.idp_fraud_event_contraindicators
+                         WHERE idp_fraud_events_id = %s
+                         ORDER BY contraindicator_code ASC
+                    """, [result[0]])
+
+                    for contra_indicator in contra_indicators:
+                        contra_result = cursor.fetchone()
+                        self.assertEqual(contra_result[0], contra_indicator)
 
     def __setup_db_connection_string(self):
         os.environ['DB_CONNECTION_STRING'] = "{} password='{}'".format(self.db_connection_string, DB_PASSWORD)
