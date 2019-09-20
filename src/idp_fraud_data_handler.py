@@ -35,39 +35,36 @@ def process_file(bucket, filename, upload_session, db_connection,
     logger.info('Processing data for IDP {}'.format(upload_session.idp_entity_id))
 
     temp_file = download_import_file(bucket, filename)
-    with open(temp_file, newline='') as csvfile:
-        reader = csv.reader(csvfile, dialect=dialect)
-        errors_occurred = False
-        skip_row = has_header
-        row_number = 0
-        try:
-            with RunInTransaction(db_connection) as cursor:
-                for row in reader:
-                    row_number = row_number + 1
-                    if skip_row:
-                        skip_row = False
-                        continue
+    try:
+        with open(temp_file, newline='') as csvfile:
+            reader = csv.reader(csvfile, dialect=dialect)
+            errors_occurred = False
+            skip_row = has_header
+            row_number = 0
+            try:
+                with RunInTransaction(db_connection) as cursor:
+                    for row in reader:
+                        row_number = row_number + 1
+                        if skip_row:
+                            skip_row = False
+                            continue
 
-                    idp_fraud_event = parse_line(row, upload_session.idp_entity_id, timezone)
-                    event_id = write_idp_fraud_event_to_database(upload_session, idp_fraud_event, cursor, logger)
-                    if event_id:
-                        logger.info(
-                            'Successfully wrote IDP fraud event ID {} to database and '
-                            'found matching fraud event {}'.format(idp_fraud_event.idp_event_id, event_id)
-                        )
-                    else:
-                        logger.warning(
-                            'Successfully wrote IDP fraud event ID {} to database BUT '
-                            'no matching fraud event found'.format(idp_fraud_event.idp_event_id)
-                        )
+                        idp_fraud_event = parse_line(row, upload_session.idp_entity_id, timezone)
+                        id = write_idp_fraud_event_to_database(upload_session, idp_fraud_event, cursor, logger)
+                        if id:
+                            logger.info(
+                                'Successfully wrote IDP fraud event ID {} to database.'.format(idp_fraud_event.idp_event_id)
+                            )
 
-        except Exception as exception:
-            message = 'Failed to store IDP fraud event: {} (line {})'.format(exception, row_number)
-            logger.exception(message)
-            write_upload_error(upload_session, row_number, '**Row Exception**', message, db_connection)
-            errors_occurred = True
+            except Exception as exception:
+                message = 'Failed to store IDP fraud event: {} (line {})'.format(exception, row_number)
+                logger.exception(message)
+                write_upload_error(upload_session, row_number, '**Row Exception**', message, db_connection)
+                errors_occurred = True
 
-    os.remove(temp_file)
+    finally:
+        os.remove(temp_file)
+
     return not errors_occurred
 
 

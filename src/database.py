@@ -208,7 +208,6 @@ def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, cursor, l
                 pid,
                 client_ip_address,
                 contra_score,
-                event_id,
                 upload_session_id
              )
              VALUES
@@ -221,18 +220,9 @@ def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, cursor, l
                 %(pid)s,
                 %(client_ip_address)s,
                 %(contra_score)s,
-                (
-                    SELECT event_id
-                      FROM billing.fraud_events
-                     WHERE fraud_event_id = %(idp_event_id)s
-                       AND entity_id = %(idp_entity_id)s
-                     LIMIT 1
-                ),
                 %(session_id)s
              )
-             ON CONFLICT (idp_entity_id, idp_event_id)
-             DO UPDATE SET contra_score = EXCLUDED.contra_score + idp_fraud_events.contra_score
-             RETURNING id, event_id
+             RETURNING id
              ;
          """, {
             "idp_entity_id": idp_fraud_event.idp_entity_id,
@@ -264,7 +254,7 @@ def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, cursor, l
                 ON CONFLICT (idp_fraud_events_id, contraindicator_code)
                 DO UPDATE SET count = idp_fraud_event_contraindicators.count + 1
             """, [id, contra_indicator])
-        return result[1]
+        return result[0]
 
     except KeyError as keyError:
         logger.exception(
