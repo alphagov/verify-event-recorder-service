@@ -5,12 +5,15 @@ import csv
 import codecs
 import dateutil.parser
 
-from src.database import create_db_connection, write_import_session, write_idp_fraud_event_to_database
-from src.s3 import fetch_import_file, fetch_object_tags, delete_import_file
+from src.database import create_db_connection, write_import_session, write_idp_fraud_event_to_database, \
+    update_session_as_validated
+from src.s3 import fetch_import_file, fetch_object_tags, move_file
 from src.kms import decrypt
 from src.idp_fraud_event import IdpFraudEvent
 from psycopg2.extensions import parse_dsn
 
+SUCCESS_FOLDER='success'
+ERROR_FOLDER='error'
 logger = logging.getLogger('idp_fraud_data_handler')
 logger.setLevel(logging.INFO)
 
@@ -35,11 +38,14 @@ def process_file(bucket, filename, session, idp_entity_id, db_connection, skip_h
 
         try:
             idp_fraud_event = parse_line(row, idp_entity_id)
-            write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection)
-            logger.info('Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_event.idp_event_id))
+            event_id = write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection)
+            if event_id:
+                logger.info('Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(idp_fraud_event.idp_event_id, event_id))
+            else:
+                logger.warning('Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_event.idp_event_id))
 
         except Exception as exception:
-            message = 'Failed to store message {}'.format(exception)
+            message = 'Failed to store IDP fraud event: {}'.format(exception)
             logger.exception(message)
             write_to_error_log(session, message)
             errors_occurred = True
@@ -66,11 +72,11 @@ def write_to_error_log(session, message):
 
 
 def move_to_error(bucket, filename):
-    pass
+    move_file(bucket, filename, ERROR_FOLDER)
 
 
 def move_to_success(bucket, filename):
-    delete_import_file(bucket, filename)
+    move_file(bucket, filename, SUCCESS_FOLDER)
 
 
 def idp_fraud_data_events(event, __):
@@ -95,6 +101,7 @@ def idp_fraud_data_events(event, __):
         session, idp_entity_id = create_import_session(bucket, filename, db_connection)
 
         if process_file(bucket, filename, session, idp_entity_id, db_connection):
+            update_session_as_validated(session, db_connection)
             move_to_success(bucket, filename)
         else:
             move_to_error(bucket, filename)

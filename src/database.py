@@ -223,7 +223,7 @@ def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection):
                     (SELECT event_id FROM billing.fraud_events WHERE fraud_event_id = %(idp_event_id)s AND entity_id = %(idp_entity_id)s),
                     %(session_id)s
                  )
-                 RETURNING id
+                 RETURNING id, event_id
              """, {
                 "idp_entity_id": idp_fraud_event.idp_entity_id,
                 "idp_event_id": idp_fraud_event.idp_event_id,
@@ -237,7 +237,7 @@ def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection):
             })
 
             result = cursor.fetchone()
-            id = result[0];
+            id = result[0]
 
             for contra_indicator in idp_fraud_event.contra_indicators:
                 cursor.execute("""
@@ -252,18 +252,28 @@ def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection):
                         %s
                     )
                 """, [id, contra_indicator])
+            return result[1]
 
     except KeyError as keyError:
         getLogger('event-recorder').warning(
-            'Failed to store a fraud event [Event ID {0}] due to key error'.format(event.event_id))
+            'Failed to store an IDP fraud event [Event ID {}] due to key error'.format(idp_fraud_event.event_id))
         raise keyError
     except IntegrityError as integrityError:
         if integrityError.pgcode == UNIQUE_VIOLATION:
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
             getLogger('event-recorder').warning(
-                'Failed to store a fraud event. The Event ID {0} already exists in the database'.format(event.event_id))
+                'Failed to store an IDP fraud event. The Event ID {} already exists in the database'.format(idp_fraud_event.event_id))
         else:
             getLogger('event-recorder').warning(
-                'Failed to store a fraud event [Event ID {0}] due to integrity error'.format(event.event_id))
+                'Failed to store an IDP fraud event [Event ID {}] due to integrity error'.format(idp_fraud_event.event_id))
             raise integrityError
+
+
+def update_session_as_validated(session, db_connection):
+    with RunInTransaction(db_connection) as cursor:
+        cursor.execute("""
+            UPDATE idp_data.upload_sessions
+               SET passed_validation = TRUE
+             WHERE id = %s
+        """, [session])

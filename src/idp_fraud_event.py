@@ -18,5 +18,3 @@ class IdpFraudEvent(object):
         self.client_ip_address = client_ip_address
         self.contra_score = contra_score
         self.contra_indicators = contra_indicators
-
-

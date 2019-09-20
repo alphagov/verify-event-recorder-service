@@ -1,4 +1,3 @@
-import boto3
 import psycopg2
 import urllib.parse
 import uuid
@@ -10,15 +9,13 @@ from datetime import datetime
 from testfixtures import LogCapture
 from retrying import retry
 
-from src import idp_fraud_data_handler
+from src import idp_fraud_data_handler, database, event_mapper
 from src.idp_fraud_event import IdpFraudEvent
 from test.helpers import *
 
-IMPORT_BUCKET_NAME = 's3-idp-fraud-data-bucket'
-IMPORT_FILE_NAME = 'idp-data.csv'
+UPLOAD_BUCKET_NAME = 's3-idp-fraud-data-bucket'
+UPLOAD_FILE_NAME = 'idp-data.csv'
 UPLOAD_USERNAME = 'my.user.name@example.com'
-VALID_ENTITY_ID = 'http://my.example.com/idp/SAML'
-DB_PASSWORD = 'secretPassword'
 
 
 @mock_s3
@@ -48,52 +45,8 @@ class IdpFraudDataHandlerTest(TestCase):
         clean_db(self.db_connection)
 
     def test_writes_messages_to_db(self):
-        idp_fraud_events = [
-            IdpFraudEvent(
-                timestamp="05/08/2019 11:54",
-                idp_event_id="1111111",
-                idp_entity_id=VALID_ENTITY_ID,
-                fid_code="DF01",
-                contra_indicators=["A04", "D02"],
-                contra_score=-5,
-                request_id="_{}".format(uuid.uuid4()),
-                client_ip_address="111.222.222.111",
-                pid=str(uuid.uuid4())
-            ),
-            IdpFraudEvent(
-                timestamp="07/08/2019 16:37",
-                idp_event_id="2222222",
-                idp_entity_id=VALID_ENTITY_ID,
-                fid_code="DF01",
-                contra_indicators=["ROLB", "D15"],
-                contra_score=-5,
-                request_id="_{}".format(uuid.uuid4()),
-                client_ip_address="222.111.111.222",
-                pid=str(uuid.uuid4())
-            ),
-            IdpFraudEvent(
-                timestamp="10/08/2019 09:24",
-                idp_event_id="3333333",
-                idp_entity_id=VALID_ENTITY_ID,
-                fid_code="DF01",
-                contra_indicators=["A01", "A05", "V03"],
-                contra_score=-10,
-                request_id="_{}".format(uuid.uuid4()),
-                client_ip_address="111.111.111.111",
-                pid=str(uuid.uuid4())
-            ),
-            IdpFraudEvent(
-                timestamp="23/08/2019 21:22",
-                idp_event_id="4444444",
-                idp_entity_id=VALID_ENTITY_ID,
-                fid_code="DF01",
-                contra_indicators=["D02"],
-                contra_score=-4,
-                request_id="_{}".format(uuid.uuid4()),
-                client_ip_address="222.222.222.222",
-                pid=str(uuid.uuid4())
-            ),
-        ]
+        idp_fraud_events = self.__generate_test_idp_fraud_events()
+
         self.__write_import_file_to_s3(idp_fraud_events)
 
         with LogCapture('idp_fraud_data_handler', propagate=False) as log_capture:
@@ -108,82 +61,45 @@ class IdpFraudDataHandlerTest(TestCase):
                 (
                     'idp_fraud_data_handler',
                     'INFO',
-                    'Processing data for IDP {}'.format(VALID_ENTITY_ID)
+                    'Processing data for IDP {}'.format(IDP_ENTITY_ID)
                 ),
                 (
                     'idp_fraud_data_handler',
-                    'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[0].idp_event_id)
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[0].idp_event_id)
                 ),
                 (
                     'idp_fraud_data_handler',
-                    'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[1].idp_event_id)
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[1].idp_event_id)
                 ),
                 (
                     'idp_fraud_data_handler',
-                    'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[2].idp_event_id)
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[2].idp_event_id)
                 ),
                 (
                     'idp_fraud_data_handler',
-                    'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[3].idp_event_id)
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[3].idp_event_id)
                 )
             )
-            self.__assert_upload_session_exists_in_database(False)
+            self.__assert_upload_session_exists_in_database(True)
             self.__assert_events_exist_in_database(idp_fraud_events)
-            self.__assert_import_file_has_been_removed_from_s3()
+            self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.SUCCESS_FOLDER)
 
     def test_writes_messages_to_db_matches_to_existing_fraud_data(self):
-        fraud_events =
-
-        idp_fraud_events = [
-            IdpFraudEvent(
-                timestamp="05/08/2019 11:54",
-                idp_event_id="1111111",
-                idp_entity_id=VALID_ENTITY_ID,
-                fid_code="DF01",
-                contra_indicators=["A04", "D02"],
-                contra_score=-5,
-                request_id="_{}".format(uuid.uuid4()),
-                client_ip_address="111.222.222.111",
-                pid=str(uuid.uuid4())
-            ),
-            IdpFraudEvent(
-                timestamp="07/08/2019 16:37",
-                idp_event_id="2222222",
-                idp_entity_id=VALID_ENTITY_ID,
-                fid_code="DF01",
-                contra_indicators=["ROLB", "D15"],
-                contra_score=-5,
-                request_id="_{}".format(uuid.uuid4()),
-                client_ip_address="222.111.111.222",
-                pid=str(uuid.uuid4())
-            ),
-            IdpFraudEvent(
-                timestamp="10/08/2019 09:24",
-                idp_event_id="3333333",
-                idp_entity_id=VALID_ENTITY_ID,
-                fid_code="DF01",
-                contra_indicators=["A01", "A05", "V03"],
-                contra_score=-10,
-                request_id="_{}".format(uuid.uuid4()),
-                client_ip_address="111.111.111.111",
-                pid=str(uuid.uuid4())
-            ),
-            IdpFraudEvent(
-                timestamp="23/08/2019 21:22",
-                idp_event_id="4444444",
-                idp_entity_id=VALID_ENTITY_ID,
-                fid_code="DF01",
-                contra_indicators=["D02"],
-                contra_score=-4,
-                request_id="_{}".format(uuid.uuid4()),
-                client_ip_address="222.222.222.222",
-                pid=str(uuid.uuid4())
-            ),
+        event_id_1 = str(uuid.uuid4())
+        event_id_2 = str(uuid.uuid4())
+        fraud_events = [
+            event_mapper.event_from_json(create_fraud_event_string(event_id_1, 'session-id-1', '1111111')),
+            event_mapper.event_from_json(create_fraud_event_string(event_id_2, 'session-id-2', '2222222')),
         ]
+        for event in fraud_events:
+            database.write_audit_event_to_database(event, self.db_connection)
+            database.write_fraud_event_to_database(event, self.db_connection)
+
+        idp_fraud_events = self.__generate_test_idp_fraud_events()
         self.__write_import_file_to_s3(idp_fraud_events)
 
         with LogCapture('idp_fraud_data_handler', propagate=False) as log_capture:
@@ -198,37 +114,86 @@ class IdpFraudDataHandlerTest(TestCase):
                 (
                     'idp_fraud_data_handler',
                     'INFO',
-                    'Processing data for IDP {}'.format(VALID_ENTITY_ID)
+                    'Processing data for IDP {}'.format(IDP_ENTITY_ID)
                 ),
                 (
                     'idp_fraud_data_handler',
                     'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[0].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(idp_fraud_events[0].idp_event_id, event_id_1)
                 ),
                 (
                     'idp_fraud_data_handler',
                     'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[1].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(idp_fraud_events[1].idp_event_id, event_id_2)
                 ),
                 (
                     'idp_fraud_data_handler',
-                    'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[2].idp_event_id)
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[2].idp_event_id)
                 ),
                 (
                     'idp_fraud_data_handler',
-                    'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[3].idp_event_id)
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[3].idp_event_id)
                 )
+            )
+            self.__assert_upload_session_exists_in_database(True)
+            self.__assert_events_exist_in_database(idp_fraud_events, fraud_events)
+            self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.SUCCESS_FOLDER)
+
+    def test_invalid_data_causes_error(self):
+        idp_fraud_events = self.__generate_test_idp_fraud_events()
+        self.__write_import_file_to_s3(idp_fraud_events, [
+            '"01/01/2019 11:00",,,'
+        ])
+
+        with LogCapture('idp_fraud_data_handler', propagate=False) as log_capture:
+            idp_fraud_data_handler.idp_fraud_data_events(self.__create_s3_event(), None)
+
+            log_capture.check(
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Created connection to DB'
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Processing data for IDP {}'.format(IDP_ENTITY_ID)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[0].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[1].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[2].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'WARNING',
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[3].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'ERROR',
+                    'Failed to store IDP fraud event: list index out of range'
+                ),
             )
             self.__assert_upload_session_exists_in_database(False)
             self.__assert_events_exist_in_database(idp_fraud_events)
-            self.__assert_import_file_has_been_removed_from_s3()
+            self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.ERROR_FOLDER)
 
-    def __assert_import_file_has_been_removed_from_s3(self):
-        s3 = boto3.resource('s3')
-        bucket = s3.Bucket(IMPORT_BUCKET_NAME)
-        self.assertEqual(len(list(bucket.objects.all())), 0)
+    def __assert_upload_file_has_been_moved_to_folder(self, folder):
+        self.assertFalse(file_exists_in_s3(UPLOAD_BUCKET_NAME, UPLOAD_FILE_NAME))
+        self.assertTrue(file_exists_in_s3(UPLOAD_BUCKET_NAME, '{}/{}'.format(folder, os.path.basename(UPLOAD_FILE_NAME))))
 
     def __assert_upload_session_exists_in_database(self, passed_validation):
         with RunInTransaction(self.db_connection) as cursor:
@@ -245,12 +210,12 @@ class IdpFraudDataHandlerTest(TestCase):
 
         self.assertIsNotNone(result)
         self.assertIsNotNone(result[0])
-        self.assertEqual(result[1], IMPORT_FILE_NAME)
-        self.assertEqual(result[2], VALID_ENTITY_ID)
+        self.assertEqual(result[1], UPLOAD_FILE_NAME)
+        self.assertEqual(result[2], IDP_ENTITY_ID)
         self.assertEqual(result[3], UPLOAD_USERNAME)
         self.assertEqual(result[4], passed_validation)
 
-    def __assert_events_exist_in_database(self, idp_fraud_events):
+    def __assert_events_exist_in_database(self, idp_fraud_events, fraud_events=None):
         with RunInTransaction(self.db_connection) as cursor:
             for event in idp_fraud_events:
                 cursor.execute("""
@@ -283,7 +248,15 @@ class IdpFraudDataHandlerTest(TestCase):
                 self.assertEqual(result[7], event.client_ip_address)
                 self.assertEqual(result[8], event.contra_score)
                 self.assertIsNotNone(result[10])
-                self.assertEqual(result[11], IMPORT_FILE_NAME)
+                self.assertEqual(result[11], UPLOAD_FILE_NAME)
+
+                if not fraud_events is None:
+                    event_id = None
+                    matched_fraud_events = [e for e in fraud_events if e.details['idp_fraud_event_id'] == event.idp_event_id
+                                            and e.details['idp_entity_id'] == event.idp_entity_id]
+                    if matched_fraud_events:
+                        event_id = matched_fraud_events[0].event_id
+                    self.assertEqual(result[9], event_id)
 
                 if event.contra_indicators:
                     contra_indicators = event.contra_indicators.copy()
@@ -307,18 +280,19 @@ class IdpFraudDataHandlerTest(TestCase):
     def __setup_s3(self):
         self.__s3_client = boto3.client('s3')
         self.__s3_client.create_bucket(
-            Bucket=IMPORT_BUCKET_NAME,
+            Bucket=UPLOAD_BUCKET_NAME,
         )
 
-    def __write_import_file_to_s3(self, idp_fraud_events):
+    def __write_import_file_to_s3(self, idp_fraud_events, error_rows=[]):
         rows = ['FID_Event_Time, EVENT_ID, FID_code, contraindicators_raised, Contra_score, Authentication_ID, Client_IPAddress, PID']
-        rows = rows + [self.__idp_fraud_event_to_csv_string(event) for event in idp_fraud_events]
-        self.__write_to_s3(IMPORT_BUCKET_NAME, IMPORT_FILE_NAME, '\n'.join(rows))
+        rows.extend([self.__idp_fraud_event_to_csv_string(event) for event in idp_fraud_events])
+        rows.extend(error_rows)
+        self.__write_to_s3(UPLOAD_BUCKET_NAME, UPLOAD_FILE_NAME, '\n'.join(rows))
 
     def __write_to_s3(self, bucket_name, filename, content):
         tags = {
             'username': UPLOAD_USERNAME,
-            'idp': VALID_ENTITY_ID,
+            'idp': IDP_ENTITY_ID,
         }
         self.__s3_client.put_object(
             Bucket=bucket_name,
@@ -334,16 +308,16 @@ class IdpFraudDataHandlerTest(TestCase):
             'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY'
         }
 
-    def __create_s3_event(self):
+    def __create_s3_event(self, alternate_file_name=None):
         return {
             "Records": [
                 {
                     "s3": {
                         "bucket": {
-                            "name": IMPORT_BUCKET_NAME,
+                            "name": UPLOAD_BUCKET_NAME,
                         },
                         "object": {
-                            "key": IMPORT_FILE_NAME,
+                            "key": alternate_file_name if alternate_file_name else UPLOAD_FILE_NAME,
                         }
                     }
                 }
@@ -361,3 +335,54 @@ class IdpFraudDataHandlerTest(TestCase):
             idp_fraud_event.client_ip_address,
             idp_fraud_event.pid
         )
+
+    def __generate_test_idp_fraud_events(self, additional_events=[]):
+        idp_fraud_events = [
+        IdpFraudEvent(
+            timestamp="05/08/2019 11:54",
+            idp_event_id="1111111",
+            idp_entity_id=IDP_ENTITY_ID,
+            fid_code="DF01",
+            contra_indicators=["A04", "D02"],
+            contra_score=-5,
+            request_id="_{}".format(uuid.uuid4()),
+            client_ip_address="111.222.222.111",
+            pid=str(uuid.uuid4())
+        ),
+        IdpFraudEvent(
+            timestamp="07/08/2019 16:37",
+            idp_event_id="2222222",
+            idp_entity_id=IDP_ENTITY_ID,
+            fid_code="DF01",
+            contra_indicators=["ROLB", "D15"],
+            contra_score=-5,
+            request_id="_{}".format(uuid.uuid4()),
+            client_ip_address="222.111.111.222",
+            pid=str(uuid.uuid4())
+        ),
+        IdpFraudEvent(
+            timestamp="10/08/2019 09:24",
+            idp_event_id="3333333",
+            idp_entity_id=IDP_ENTITY_ID,
+            fid_code="DF01",
+            contra_indicators=["A01", "A05", "V03"],
+            contra_score=-10,
+            request_id="_{}".format(uuid.uuid4()),
+            client_ip_address="111.111.111.111",
+            pid=str(uuid.uuid4())
+        ),
+        IdpFraudEvent(
+            timestamp="23/08/2019 21:22",
+            idp_event_id="4444444",
+            idp_entity_id=IDP_ENTITY_ID,
+            fid_code="DF01",
+            contra_indicators=["D02"],
+            contra_score=-4,
+            request_id="_{}".format(uuid.uuid4()),
+            client_ip_address="222.222.222.222",
+            pid=str(uuid.uuid4())
+        ),
+        ]
+
+        idp_fraud_events.extend(additional_events)
+        return idp_fraud_events

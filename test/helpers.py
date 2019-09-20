@@ -1,5 +1,7 @@
 import json
 import os
+import boto3
+import botocore.exceptions
 from src.database import RunInTransaction
 
 EVENT_TYPE = 'session_event'
@@ -114,3 +116,15 @@ def create_fraud_event_without_idp_fraud_event_id_string(event_id, session_id):
             'transaction_entity_id': TRANSACTION_ENTITY_ID
         }
     })
+
+
+def file_exists_in_s3(bucket_name, key):
+    s3 = boto3.resource('s3')
+    try:
+        s3.Object(bucket_name, key).load()
+        return True
+    except botocore.exceptions.ClientError as e:
+        if e.response['Error']['Code'] == "404":
+            return False
+        else:
+            raise
