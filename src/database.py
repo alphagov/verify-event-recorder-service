@@ -212,29 +212,29 @@ def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection):
                  )
                  VALUES
                  (
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    %s,
-                    NULL,
-                    %s
+                    %(idp_entity_id)s,
+                    %(idp_event_id)s,
+                    %(timestamp)s,
+                    %(fid_code)s,
+                    %(request_id)s,
+                    %(pid)s,
+                    %(client_ip_address)s,
+                    %(contra_score)s,
+                    (SELECT event_id FROM billing.fraud_events WHERE fraud_event_id = %(idp_event_id)s AND entity_id = %(idp_entity_id)s),
+                    %(session_id)s
                  )
                  RETURNING id
-             """, [
-                idp_fraud_event.idp_entity_id,
-                idp_fraud_event.idp_event_id,
-                idp_fraud_event.timestamp,
-                idp_fraud_event.fid_code,
-                idp_fraud_event.request_id,
-                idp_fraud_event.pid,
-                idp_fraud_event.client_ip_address,
-                idp_fraud_event.contra_score,
-                session
-            ])
+             """, {
+                "idp_entity_id": idp_fraud_event.idp_entity_id,
+                "idp_event_id": idp_fraud_event.idp_event_id,
+                "timestamp": idp_fraud_event.timestamp,
+                "fid_code": idp_fraud_event.fid_code,
+                "request_id": idp_fraud_event.request_id,
+                "pid": idp_fraud_event.pid,
+                "client_ip_address": idp_fraud_event.client_ip_address,
+                "contra_score": idp_fraud_event.contra_score,
+                "session_id": session
+            })
 
             result = cursor.fetchone()
             id = result[0];

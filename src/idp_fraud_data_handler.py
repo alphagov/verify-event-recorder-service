@@ -23,6 +23,7 @@ def create_import_session(bucket, filename, db_connection):
 
 
 def process_file(bucket, filename, session, idp_entity_id, db_connection, skip_header=True):
+    logger.info('Processing data for IDP {}'.format(idp_entity_id))
     iterable = fetch_import_file(bucket, filename)
     reader = csv.reader(codecs.iterdecode(iterable, 'utf-8'), dialect="excel")
     errors_occurred = False
@@ -35,6 +36,7 @@ def process_file(bucket, filename, session, idp_entity_id, db_connection, skip_h
         try:
             idp_fraud_event = parse_line(row, idp_entity_id)
             write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection)
+            logger.info('Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_event.idp_event_id))
 
         except Exception as exception:
             message = 'Failed to store message {}'.format(exception)

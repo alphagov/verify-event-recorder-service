@@ -1,4 +1,3 @@
-import os
 import boto3
 import psycopg2
 import urllib.parse
@@ -13,7 +12,7 @@ from retrying import retry
 
 from src import idp_fraud_data_handler
 from src.idp_fraud_event import IdpFraudEvent
-from src.database import RunInTransaction
+from test.helpers import *
 
 IMPORT_BUCKET_NAME = 's3-idp-fraud-data-bucket'
 IMPORT_FILE_NAME = 'idp-data.csv'
@@ -46,7 +45,7 @@ class IdpFraudDataHandlerTest(TestCase):
         self.__setup_db_connection_string()
 
     def tearDown(self):
-        self.__clean_db()
+        clean_db(self.db_connection)
 
     def test_writes_messages_to_db(self):
         idp_fraud_events = [
@@ -106,19 +105,125 @@ class IdpFraudDataHandlerTest(TestCase):
                     'INFO',
                     'Created connection to DB'
                 ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Processing data for IDP {}'.format(VALID_ENTITY_ID)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[0].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[1].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[2].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[3].idp_event_id)
+                )
             )
             self.__assert_upload_session_exists_in_database(False)
             self.__assert_events_exist_in_database(idp_fraud_events)
             self.__assert_import_file_has_been_removed_from_s3()
 
-    def __clean_db(self):
-        with RunInTransaction(self.db_connection) as cursor:
-            cursor.execute("""
-                DELETE FROM idp_data.idp_fraud_event_contraindicators;
-                DELETE FROM idp_data.idp_fraud_events;
-                DELETE FROM idp_data.upload_session_validation_failures;
-                DELETE FROM idp_data.upload_sessions;
-            """)
+    def test_writes_messages_to_db_matches_to_existing_fraud_data(self):
+        fraud_events =
+
+        idp_fraud_events = [
+            IdpFraudEvent(
+                timestamp="05/08/2019 11:54",
+                idp_event_id="1111111",
+                idp_entity_id=VALID_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["A04", "D02"],
+                contra_score=-5,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="111.222.222.111",
+                pid=str(uuid.uuid4())
+            ),
+            IdpFraudEvent(
+                timestamp="07/08/2019 16:37",
+                idp_event_id="2222222",
+                idp_entity_id=VALID_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["ROLB", "D15"],
+                contra_score=-5,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="222.111.111.222",
+                pid=str(uuid.uuid4())
+            ),
+            IdpFraudEvent(
+                timestamp="10/08/2019 09:24",
+                idp_event_id="3333333",
+                idp_entity_id=VALID_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["A01", "A05", "V03"],
+                contra_score=-10,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="111.111.111.111",
+                pid=str(uuid.uuid4())
+            ),
+            IdpFraudEvent(
+                timestamp="23/08/2019 21:22",
+                idp_event_id="4444444",
+                idp_entity_id=VALID_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["D02"],
+                contra_score=-4,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="222.222.222.222",
+                pid=str(uuid.uuid4())
+            ),
+        ]
+        self.__write_import_file_to_s3(idp_fraud_events)
+
+        with LogCapture('idp_fraud_data_handler', propagate=False) as log_capture:
+            idp_fraud_data_handler.idp_fraud_data_events(self.__create_s3_event(), None)
+
+            log_capture.check(
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Created connection to DB'
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Processing data for IDP {}'.format(VALID_ENTITY_ID)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[0].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[1].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[2].idp_event_id)
+                ),
+                (
+                    'idp_fraud_data_handler',
+                    'INFO',
+                    'Successfully wrote IDP fraud event ID {} to database'.format(idp_fraud_events[3].idp_event_id)
+                )
+            )
+            self.__assert_upload_session_exists_in_database(False)
+            self.__assert_events_exist_in_database(idp_fraud_events)
+            self.__assert_import_file_has_been_removed_from_s3()
 
     def __assert_import_file_has_been_removed_from_s3(self):
         s3 = boto3.resource('s3')
