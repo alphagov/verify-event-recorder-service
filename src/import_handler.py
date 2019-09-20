@@ -8,7 +8,7 @@ from src.database import create_db_connection, write_audit_event_to_database, \
 from src.event_mapper import event_from_json_object
 from src.s3 import fetch_import_file, delete_import_file
 from src.kms import decrypt
-from psycopg2.extensions import parse_dsn
+from src.common import get_database_password
 
 
 def import_events(event, __):
@@ -17,16 +17,7 @@ def import_events(event, __):
 
     dsn = os.environ['DB_CONNECTION_STRING']
 
-    database_password = None
-    if 'ENCRYPTED_DATABASE_PASSWORD' in os.environ:
-        # boto returns decrypted as b'bytes' so decode to convert to password string
-        database_password = decrypt(os.environ['ENCRYPTED_DATABASE_PASSWORD']).decode()
-    else:
-        dsn_components = parse_dsn(dsn)
-        database_password = boto3.client('rds').generate_db_auth_token(
-            dsn_components['host'], 5432, dsn_components['user'])
-
-    db_connection = create_db_connection(dsn, database_password)
+    db_connection = create_db_connection(dsn, get_database_password(dsn))
     logger.info('Created connection to DB')
 
     for record in event['Records']:

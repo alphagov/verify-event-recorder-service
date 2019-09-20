@@ -6,11 +6,11 @@ import codecs
 import dateutil.parser
 
 from src.database import create_db_connection, write_import_session, write_idp_fraud_event_to_database, \
-    update_session_as_validated
+    update_session_as_validated, write_upload_error
 from src.s3 import fetch_import_file, fetch_object_tags, move_file
 from src.kms import decrypt
 from src.idp_fraud_event import IdpFraudEvent
-from psycopg2.extensions import parse_dsn
+from src.common import get_database_password
 
 SUCCESS_FOLDER='success'
 ERROR_FOLDER='error'
@@ -22,7 +22,7 @@ def create_import_session(bucket, filename, db_connection):
     tags = fetch_object_tags(bucket, filename)
     idp_entity_id = tags['idp']
     username = tags['username']
-    return write_import_session(filename, idp_entity_id, username, db_connection)
+    return write_import_session(filename, idp_entity_id, username, db_connection, logger)
 
 
 def process_file(bucket, filename, session, idp_entity_id, db_connection, skip_header=True):
@@ -31,23 +31,25 @@ def process_file(bucket, filename, session, idp_entity_id, db_connection, skip_h
     reader = csv.reader(codecs.iterdecode(iterable, 'utf-8'), dialect="excel")
     errors_occurred = False
     skip_row = skip_header
+    row_number = 0
     for row in reader:
+        row_number = row_number + 1
         if skip_row:
             skip_row = False
             continue
 
         try:
             idp_fraud_event = parse_line(row, idp_entity_id)
-            event_id = write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection)
+            event_id = write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection, logger)
             if event_id:
                 logger.info('Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(idp_fraud_event.idp_event_id, event_id))
             else:
                 logger.warning('Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_event.idp_event_id))
 
         except Exception as exception:
-            message = 'Failed to store IDP fraud event: {}'.format(exception)
+            message = 'Failed to store IDP fraud event: {} (line {})'.format(exception, row_number)
             logger.exception(message)
-            write_to_error_log(session, message)
+            write_upload_error(session, row_number, '**Row Exception**', message, db_connection)
             errors_occurred = True
 
     return not errors_occurred
@@ -67,10 +69,6 @@ def parse_line(row, idp_entity_id):
     )
 
 
-def write_to_error_log(session, message):
-    pass
-
-
 def move_to_error(bucket, filename):
     move_file(bucket, filename, ERROR_FOLDER)
 
@@ -82,16 +80,7 @@ def move_to_success(bucket, filename):
 def idp_fraud_data_events(event, __):
     dsn = os.environ['DB_CONNECTION_STRING']
 
-    database_password = None
-    if 'ENCRYPTED_DATABASE_PASSWORD' in os.environ:
-        # boto returns decrypted as b'bytes' so decode to convert to password string
-        database_password = decrypt(os.environ['ENCRYPTED_DATABASE_PASSWORD']).decode()
-    else:
-        dsn_components = parse_dsn(dsn)
-        database_password = boto3.client('rds').generate_db_auth_token(
-            dsn_components['host'], 5432, dsn_components['user'])
-
-    db_connection = create_db_connection(dsn, database_password)
+    db_connection = create_db_connection(dsn, get_database_password(dsn))
     logger.info('Created connection to DB')
 
     for record in event['Records']:

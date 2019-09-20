@@ -184,11 +184,12 @@ class IdpFraudDataHandlerTest(TestCase):
                 (
                     'idp_fraud_data_handler',
                     'ERROR',
-                    'Failed to store IDP fraud event: list index out of range'
+                    'Failed to store IDP fraud event: list index out of range (line 6)'
                 ),
             )
             self.__assert_upload_session_exists_in_database(False)
             self.__assert_events_exist_in_database(idp_fraud_events)
+            self.__assert_error_in_database_failure_table(6, '**Row Exception**', 'Failed to store IDP fraud event: list index out of range (line 6)')
             self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.ERROR_FOLDER)
 
     def __assert_upload_file_has_been_moved_to_folder(self, folder):
@@ -208,12 +209,32 @@ class IdpFraudDataHandlerTest(TestCase):
             """)
             result = cursor.fetchone()
 
-        self.assertIsNotNone(result)
-        self.assertIsNotNone(result[0])
-        self.assertEqual(result[1], UPLOAD_FILE_NAME)
-        self.assertEqual(result[2], IDP_ENTITY_ID)
-        self.assertEqual(result[3], UPLOAD_USERNAME)
-        self.assertEqual(result[4], passed_validation)
+            self.assertIsNotNone(result)
+            self.assertIsNotNone(result[0])
+            self.assertEqual(result[1], UPLOAD_FILE_NAME)
+            self.assertEqual(result[2], IDP_ENTITY_ID)
+            self.assertEqual(result[3], UPLOAD_USERNAME)
+            self.assertEqual(result[4], passed_validation)
+
+    def __assert_error_in_database_failure_table(self, row, field, message):
+        with RunInTransaction(self.db_connection) as cursor:
+            cursor.execute("""
+                SELECT 
+                    id,
+                    upload_session_id,
+                    row,
+                    field,
+                    message
+                  FROM idp_data.upload_session_validation_failures
+            """)
+            result = cursor.fetchone()
+
+            self.assertIsNotNone(result)
+            self.assertIsNotNone(result[0])
+            self.assertIsNotNone(result[1])
+            self.assertEqual(result[2], row)
+            self.assertEqual(result[3], field)
+            self.assertEqual(result[4], message)
 
     def __assert_events_exist_in_database(self, idp_fraud_events, fraud_events=None):
         with RunInTransaction(self.db_connection) as cursor:
