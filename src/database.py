@@ -151,7 +151,7 @@ def write_fraud_event_to_database(event, db_connection):
             raise integrityError
 
 
-def write_import_session(filename, idp_entity_id, username, db_connection, logger):
+def write_import_session(upload_session, db_connection, logger):
     try:
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""
@@ -165,35 +165,39 @@ def write_import_session(filename, idp_entity_id, username, db_connection, logge
                 )
                 VALUES
                 (
-                    NOW(),
+                    %s,
                     %s,
                     %s,
                     %s,
                     FALSE
                 )
-                RETURNING id, idp_entity_id
-            """, [filename, idp_entity_id, username])
+                RETURNING id
+            """, [upload_session.time_stamp,
+                  upload_session.source_file_name,
+                  upload_session.idp_entity_id,
+                  upload_session.userid])
 
             result = cursor.fetchone()
-            return result[0], result[1];
+            upload_session.id = result[0]
+            return upload_session
 
     except KeyError as keyError:
         logger.warning(
-            'Failed to store a fraud event [Event ID {0}] due to key error'.format(event.event_id))
+            'Failed to store upload session {} due to key error'.format(upload_session.id))
         raise keyError
     except IntegrityError as integrityError:
         if integrityError.pgcode == UNIQUE_VIOLATION:
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
             logger.warning(
-                'Failed to store a upload session. The Event ID {0} already exists in the database'.format(event.event_id))
+                'Failed to store a upload session. The ID {0} already exists in the database'.format(upload_session.id))
         else:
             logger.warning(
-                'Failed to store a fraud event [Event ID {0}] due to integrity error'.format(event.event_id))
+                'Failed to store a upload session [ID {0}] due to integrity error'.format(upload_session.id))
             raise integrityError
 
 
-def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection, logger):
+def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, db_connection, logger):
     try:
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""
@@ -223,7 +227,10 @@ def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection, l
                     (SELECT event_id FROM billing.fraud_events WHERE fraud_event_id = %(idp_event_id)s AND entity_id = %(idp_entity_id)s),
                     %(session_id)s
                  )
+                 ON CONFLICT (idp_entity_id, idp_event_id)
+                 DO UPDATE SET contra_score = EXCLUDED.contra_score + idp_fraud_events.contra_score
                  RETURNING id, event_id
+                 ;
              """, {
                 "idp_entity_id": idp_fraud_event.idp_entity_id,
                 "idp_event_id": idp_fraud_event.idp_event_id,
@@ -233,7 +240,7 @@ def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection, l
                 "pid": idp_fraud_event.pid,
                 "client_ip_address": idp_fraud_event.client_ip_address,
                 "contra_score": idp_fraud_event.contra_score,
-                "session_id": session
+                "session_id": upload_session.id
             })
 
             result = cursor.fetchone()
@@ -251,35 +258,37 @@ def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection, l
                         %s,
                         %s
                     )
+                    ON CONFLICT (idp_fraud_events_id, contraindicator_code)
+                    DO UPDATE SET count = idp_fraud_event_contraindicators.count + 1
                 """, [id, contra_indicator])
             return result[1]
 
     except KeyError as keyError:
         logger.warning(
-            'Failed to store an IDP fraud event [Event ID {}] due to key error'.format(idp_fraud_event.event_id))
+            'Failed to store an IDP fraud event [Event ID {}] due to key error'.format(idp_fraud_event.idp_event_id))
         raise keyError
     except IntegrityError as integrityError:
         if integrityError.pgcode == UNIQUE_VIOLATION:
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
             logger.warning(
-                'Failed to store an IDP fraud event. The Event ID {} already exists in the database'.format(idp_fraud_event.event_id))
+                'Failed to store an IDP fraud event. The Event ID {} already exists in the database'.format(idp_fraud_event.idp_event_id))
         else:
             logger.warning(
-                'Failed to store an IDP fraud event [Event ID {}] due to integrity error'.format(idp_fraud_event.event_id))
+                'Failed to store an IDP fraud event [Event ID {}] due to integrity error'.format(idp_fraud_event.idp_event_id))
             raise integrityError
 
 
-def update_session_as_validated(session, db_connection):
+def update_session_as_validated(upload_session, db_connection):
     with RunInTransaction(db_connection) as cursor:
         cursor.execute("""
             UPDATE idp_data.upload_sessions
                SET passed_validation = TRUE
              WHERE id = %s
-        """, [session])
+        """, [upload_session.id])
 
 
-def write_upload_error(session, row, field, message, db_connection):
+def write_upload_error(upload_session, row, field, message, db_connection):
     with RunInTransaction(db_connection) as cursor:
         cursor.execute("""
             INSERT INTO idp_data.upload_session_validation_failures
@@ -296,4 +305,4 @@ def write_upload_error(session, row, field, message, db_connection):
                 %s,
                 %s
             )
-        """, [session, row, field, message])
+        """, [upload_session.id, row, field, message])

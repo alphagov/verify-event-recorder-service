@@ -1,6 +1,6 @@
 import boto3
 import os
-
+import logging
 
 def fetch_decryption_key():
     s3_client = boto3.client('s3')
