@@ -186,6 +186,68 @@ def write_import_session(filename, idp_entity_id, username, db_connection):
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
             getLogger('event-recorder').warning(
+                'Failed to store a upload session. The Event ID {0} already exists in the database'.format(event.event_id))
+        else:
+            getLogger('event-recorder').warning(
+                'Failed to store a fraud event [Event ID {0}] due to integrity error'.format(event.event_id))
+            raise integrityError
+
+
+def write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection):
+    try:
+        with RunInTransaction(db_connection) as cursor:
+            cursor.execute("""
+                 INSERT INTO idp_data.idp_fraud_events
+                 (
+                    idp_entity_id,
+                    idp_event_id,
+                    time_stamp,
+                    fid_code,
+                    request_id,
+                    pid,
+                    client_ip_address,
+                    contra_score,
+                    event_id,
+                    upload_session_id
+                 )
+                 VALUES
+                 (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    NULL,
+                    %s
+                 )
+                 RETURNING id
+             """, [
+                idp_fraud_event.idp_entity_id,
+                idp_fraud_event.idp_event_id,
+                idp_fraud_event.timestamp,
+                idp_fraud_event.fid_code,
+                idp_fraud_event.request_id,
+                idp_fraud_event.pid,
+                idp_fraud_event.client_ip_address,
+                idp_fraud_event.contra_score,
+                session
+            ])
+
+            result = cursor.fetchone()
+            return result[0];
+
+    except KeyError as keyError:
+        getLogger('event-recorder').warning(
+            'Failed to store a fraud event [Event ID {0}] due to key error'.format(event.event_id))
+        raise keyError
+    except IntegrityError as integrityError:
+        if integrityError.pgcode == UNIQUE_VIOLATION:
+            # The event has already been recorded - don't throw an exception (no need to retry this message), just
+            # log a notification and move on.
+            getLogger('event-recorder').warning(
                 'Failed to store a fraud event. The Event ID {0} already exists in the database'.format(event.event_id))
         else:
             getLogger('event-recorder').warning(

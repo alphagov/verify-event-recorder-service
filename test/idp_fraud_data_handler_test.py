@@ -3,6 +3,7 @@ import boto3
 import psycopg2
 import urllib.parse
 import uuid
+import dateutil.parser
 
 from moto import mock_s3
 from unittest import TestCase
@@ -58,7 +59,7 @@ class IdpFraudDataHandlerTest(TestCase):
                 contra_score=-5,
                 request_id="_{}".format(uuid.uuid4()),
                 client_ip_address="111.222.222.111",
-                pid=uuid.uuid4()
+                pid=str(uuid.uuid4())
             ),
             IdpFraudEvent(
                 timestamp="07/08/2019 16:37",
@@ -69,7 +70,7 @@ class IdpFraudDataHandlerTest(TestCase):
                 contra_score=-5,
                 request_id="_{}".format(uuid.uuid4()),
                 client_ip_address="222.111.111.222",
-                pid=uuid.uuid4()
+                pid=str(uuid.uuid4())
             ),
             IdpFraudEvent(
                 timestamp="10/08/2019 09:24",
@@ -80,7 +81,7 @@ class IdpFraudDataHandlerTest(TestCase):
                 contra_score=-10,
                 request_id="_{}".format(uuid.uuid4()),
                 client_ip_address="111.111.111.111",
-                pid=uuid.uuid4()
+                pid=str(uuid.uuid4())
             ),
             IdpFraudEvent(
                 timestamp="23/08/2019 21:22",
@@ -91,7 +92,7 @@ class IdpFraudDataHandlerTest(TestCase):
                 contra_score=-4,
                 request_id="_{}".format(uuid.uuid4()),
                 client_ip_address="222.222.222.222",
-                pid=uuid.uuid4()
+                pid=str(uuid.uuid4())
             ),
         ]
         self.__write_import_file_to_s3(idp_fraud_events)
@@ -107,6 +108,7 @@ class IdpFraudDataHandlerTest(TestCase):
                 ),
             )
             self.__assert_upload_session_exists_in_database(False)
+            self.__assert_events_exist_in_database(idp_fraud_events)
             self.__assert_import_file_has_been_removed_from_s3()
 
     def __clean_db(self):
@@ -142,6 +144,38 @@ class IdpFraudDataHandlerTest(TestCase):
         self.assertEqual(result[2], VALID_ENTITY_ID)
         self.assertEqual(result[3], UPLOAD_USERNAME)
         self.assertEqual(result[4], passed_validation)
+
+    def __assert_events_exist_in_database(self, idp_fraud_events):
+        with RunInTransaction(self.db_connection) as cursor:
+            for event in idp_fraud_events:
+                cursor.execute("""
+                    SELECT 
+                        id,
+                        idp_entity_id,
+                        idp_event_id,
+                        time_stamp,
+                        fid_code,
+                        request_id,
+                        pid,
+                        client_ip_address,
+                        contra_score,
+                        event_id,
+                        upload_session_id
+                      FROM idp_data.idp_fraud_events
+                     WHERE idp_entity_id = %s 
+                       AND idp_event_id = %s
+                """, [event.idp_entity_id, event.idp_event_id])
+                result = cursor.fetchone()
+
+                self.assertIsNotNone(result)
+                self.assertIsNotNone(result[0])
+                self.assertEqual(result[3], dateutil.parser.parse(event.timestamp))
+                self.assertEqual(result[4], event.fid_code)
+                self.assertEqual(result[5], event.request_id)
+                self.assertEqual(result[6], event.pid)
+                self.assertEqual(result[7], event.client_ip_address)
+                self.assertEqual(result[8], event.contra_score)
+                self.assertIsNotNone(result[10])
 
     def __setup_db_connection_string(self):
         os.environ['DB_CONNECTION_STRING'] = "{} password='{}'".format(self.db_connection_string, DB_PASSWORD)

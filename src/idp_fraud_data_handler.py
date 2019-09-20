@@ -3,8 +3,9 @@ import os
 import boto3
 import csv
 import codecs
+import dateutil.parser
 
-from src.database import create_db_connection, write_import_session
+from src.database import create_db_connection, write_import_session, write_idp_fraud_event_to_database
 from src.s3 import fetch_import_file, fetch_object_tags, delete_import_file
 from src.kms import decrypt
 from src.idp_fraud_event import IdpFraudEvent
@@ -21,15 +22,19 @@ def create_import_session(bucket, filename, db_connection):
     return write_import_session(filename, idp_entity_id, username, db_connection)
 
 
-def process_file(bucket, filename, session, idp_entity_id, db_connection):
+def process_file(bucket, filename, session, idp_entity_id, db_connection, skip_header=True):
     iterable = fetch_import_file(bucket, filename)
     reader = csv.reader(codecs.iterdecode(iterable, 'utf-8'), dialect="excel")
     errors_occurred = False
-
+    skip_row = skip_header
     for row in reader:
+        if skip_row:
+            skip_row = False
+            continue
+
         try:
-            fraud_event = parse_line(row, idp_entity_id)
-            store_event(session, fraud_event, db_connection)
+            idp_fraud_event = parse_line(row, idp_entity_id)
+            write_idp_fraud_event_to_database(session, idp_fraud_event, db_connection)
 
         except Exception as exception:
             message = 'Failed to store message {}'.format(exception)
@@ -43,7 +48,7 @@ def process_file(bucket, filename, session, idp_entity_id, db_connection):
 def parse_line(row, idp_entity_id):
     return IdpFraudEvent(
         idp_entity_id=idp_entity_id,
-        timestamp=row[0],
+        timestamp=dateutil.parser.parse(row[0]),
         idp_event_id=row[1],
         fid_code=row[2],
         contra_indicators=row[3].split(","),
@@ -64,10 +69,6 @@ def move_to_error(bucket, filename):
 
 def move_to_success(bucket, filename):
     delete_import_file(bucket, filename)
-
-
-def store_event(session, fraud_event, db_connection):
-    pass
 
 
 def idp_fraud_data_events(event, __):
