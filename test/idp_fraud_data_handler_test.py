@@ -467,7 +467,7 @@ class IdpFraudDataHandlerTest(TestCase):
                 ),
             )
             self.__assert_upload_session_exists_in_database(False)
-            self.__assert_events_exist_in_database(idp_fraud_events)
+            self.__assert_no_events_exist_in_database(idp_fraud_events)
             self.__assert_error_in_database_failure_table(
                 6,
                 '**Row Exception**',
@@ -544,9 +544,8 @@ class IdpFraudDataHandlerTest(TestCase):
             idp_fraud_data_handler.idp_fraud_data_events(self.__create_s3_event(), None)
 
             self.__assert_upload_session_exists_in_database(True)
-            self.__assert_events_exist_in_database(idp_fraud_events+additional_events)
+            self.__assert_events_exist_in_database(idp_fraud_events + additional_events)
             self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.SUCCESS_FOLDER)
-
 
     @parameterized.expand([
         ["comma", ","],
@@ -678,6 +677,32 @@ class IdpFraudDataHandlerTest(TestCase):
                         self.assertEqual(contra_result[0], contra_indicator)
                         expected_count = len([c for c in event.contra_indicators if c == contra_indicator])
                         self.assertEqual(contra_result[1], expected_count)
+
+    def __assert_no_events_exist_in_database(self, idp_fraud_events):
+        with RunInTransaction(self.db_connection) as cursor:
+            for event in idp_fraud_events:
+                cursor.execute("""
+                    SELECT
+                        a.id,
+                        a.idp_entity_id,
+                        a.idp_event_id,
+                        a.time_stamp,
+                        a.fid_code,
+                        a.request_id,
+                        a.pid,
+                        a.client_ip_address,
+                        a.contra_score,
+                        a.event_id,
+                        a.upload_session_id,
+                        b.source_file_name
+                      FROM idp_data.idp_fraud_events a
+                     INNER JOIN idp_data.upload_sessions b ON a.upload_session_id = b.id
+                     WHERE a.idp_entity_id = %s
+                       AND a.idp_event_id = %s
+                """, [event.idp_entity_id, event.idp_event_id])
+                result = cursor.fetchone()
+
+                self.assertIsNone(result)
 
     def __setup_db_connection_string(self):
         os.environ['DB_CONNECTION_STRING'] = "{} password='{}'".format(self.db_connection_string, DB_PASSWORD)

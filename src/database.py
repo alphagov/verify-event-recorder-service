@@ -195,76 +195,75 @@ def write_import_session(upload_session, db_connection, logger):
         raise integrityError
 
 
-def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, db_connection, logger):
+def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, cursor, logger):
     try:
-        with RunInTransaction(db_connection) as cursor:
+        cursor.execute("""
+             INSERT INTO idp_data.idp_fraud_events
+             (
+                idp_entity_id,
+                idp_event_id,
+                time_stamp,
+                fid_code,
+                request_id,
+                pid,
+                client_ip_address,
+                contra_score,
+                event_id,
+                upload_session_id
+             )
+             VALUES
+             (
+                %(idp_entity_id)s,
+                %(idp_event_id)s,
+                %(timestamp)s,
+                %(fid_code)s,
+                %(request_id)s,
+                %(pid)s,
+                %(client_ip_address)s,
+                %(contra_score)s,
+                (
+                    SELECT event_id
+                      FROM billing.fraud_events
+                     WHERE fraud_event_id = %(idp_event_id)s
+                       AND entity_id = %(idp_entity_id)s
+                ),
+                %(session_id)s
+             )
+             ON CONFLICT (idp_entity_id, idp_event_id)
+             DO UPDATE SET contra_score = EXCLUDED.contra_score + idp_fraud_events.contra_score
+             RETURNING id, event_id
+             ;
+         """, {
+            "idp_entity_id": idp_fraud_event.idp_entity_id,
+            "idp_event_id": idp_fraud_event.idp_event_id,
+            "timestamp": idp_fraud_event.timestamp,
+            "fid_code": idp_fraud_event.fid_code,
+            "request_id": idp_fraud_event.request_id,
+            "pid": idp_fraud_event.pid,
+            "client_ip_address": idp_fraud_event.client_ip_address,
+            "contra_score": idp_fraud_event.contra_score,
+            "session_id": upload_session.id
+        })
+
+        result = cursor.fetchone()
+        id = result[0]
+
+        for contra_indicator in idp_fraud_event.contra_indicators:
             cursor.execute("""
-                 INSERT INTO idp_data.idp_fraud_events
-                 (
-                    idp_entity_id,
-                    idp_event_id,
-                    time_stamp,
-                    fid_code,
-                    request_id,
-                    pid,
-                    client_ip_address,
-                    contra_score,
-                    event_id,
-                    upload_session_id
-                 )
-                 VALUES
-                 (
-                    %(idp_entity_id)s,
-                    %(idp_event_id)s,
-                    %(timestamp)s,
-                    %(fid_code)s,
-                    %(request_id)s,
-                    %(pid)s,
-                    %(client_ip_address)s,
-                    %(contra_score)s,
-                    (
-                        SELECT event_id
-                          FROM billing.fraud_events
-                         WHERE fraud_event_id = %(idp_event_id)s
-                           AND entity_id = %(idp_entity_id)s
-                    ),
-                    %(session_id)s
-                 )
-                 ON CONFLICT (idp_entity_id, idp_event_id)
-                 DO UPDATE SET contra_score = EXCLUDED.contra_score + idp_fraud_events.contra_score
-                 RETURNING id, event_id
-                 ;
-             """, {
-                "idp_entity_id": idp_fraud_event.idp_entity_id,
-                "idp_event_id": idp_fraud_event.idp_event_id,
-                "timestamp": idp_fraud_event.timestamp,
-                "fid_code": idp_fraud_event.fid_code,
-                "request_id": idp_fraud_event.request_id,
-                "pid": idp_fraud_event.pid,
-                "client_ip_address": idp_fraud_event.client_ip_address,
-                "contra_score": idp_fraud_event.contra_score,
-                "session_id": upload_session.id
-            })
-
-            result = cursor.fetchone()
-            id = result[0]
-
-            for contra_indicator in idp_fraud_event.contra_indicators:
-                cursor.execute("""
-                    INSERT INTO idp_data.idp_fraud_event_contraindicators
-                    (
-                        idp_fraud_events_id,
-                        contraindicator_code
-                    )
-                    VALUES
-                    (
-                        %s,
-                        %s
-                    )
-                    ON CONFLICT (idp_fraud_events_id, contraindicator_code)
-                    DO UPDATE SET count = idp_fraud_event_contraindicators.count + 1
-                """, [id, contra_indicator])
-            return result[1]
+                INSERT INTO idp_data.idp_fraud_event_contraindicators
+                (
+                    idp_fraud_events_id,
+                    contraindicator_code
+                )
+                VALUES
+                (
+                    %s,
+                    %s
+                )
+                ON CONFLICT (idp_fraud_events_id, contraindicator_code)
+                DO UPDATE SET count = idp_fraud_event_contraindicators.count + 1
+            """, [id, contra_indicator])
+        return result[1]
 
     except KeyError as keyError:
         logger.exception(
