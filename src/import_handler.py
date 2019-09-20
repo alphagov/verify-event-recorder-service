@@ -1,14 +1,12 @@
+import json
 import logging
 import os
-import json
-import boto3
 
+from src.common import get_database_password
 from src.database import create_db_connection, write_audit_event_to_database, \
     write_billing_event_to_database, write_fraud_event_to_database
 from src.event_mapper import event_from_json_object
 from src.s3 import fetch_import_file, delete_import_file
-from src.kms import decrypt
-from src.common import get_database_password
 
 
 def import_events(event, __):

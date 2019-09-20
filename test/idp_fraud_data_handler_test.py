@@ -1,16 +1,21 @@
-import psycopg2
+import os
 import urllib.parse
 import uuid
-import dateparser
-
-from moto import mock_s3
 from unittest import TestCase
-from testfixtures import LogCapture
+
+import boto3
+import dateparser
+import psycopg2
+from moto import mock_s3, mock_kms
+from parameterized import parameterized
 from retrying import retry
+from testfixtures import LogCapture
 
 from src import idp_fraud_data_handler, database, event_mapper
+from src.database import RunInTransaction
 from src.idp_fraud_event import IdpFraudEvent
-from test.helpers import *
+from test.helpers import IDP_ENTITY_ID, clean_db, create_fraud_event_string, file_exists_in_s3, setup_stub_aws_config, \
+    DB_PASSWORD
 
 UPLOAD_BUCKET_NAME = 's3-idp-fraud-data-bucket'
 UPLOAD_FILE_NAME = 'idp-data.csv'
@@ -18,6 +23,7 @@ UPLOAD_USERNAME = 'my.user.name@example.com'
 
 
 @mock_s3
+@mock_kms
 class IdpFraudDataHandlerTest(TestCase):
     __s3_client = None
     __kms_client = None
@@ -36,7 +42,7 @@ class IdpFraudDataHandlerTest(TestCase):
         cls.db_connection = psycopg2.connect(cls.db_connection_string)
 
     def setUp(self):
-        self.__setup_stub_aws_config()
+        setup_stub_aws_config
         self.__setup_s3()
         self.__setup_db_connection_string()
 
@@ -65,22 +71,30 @@ class IdpFraudDataHandlerTest(TestCase):
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[0].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[0].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[1].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[1].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[2].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[2].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[3].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[3].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
@@ -123,22 +137,30 @@ class IdpFraudDataHandlerTest(TestCase):
                 (
                     'idp_fraud_data_handler',
                     'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(idp_fraud_events[0].idp_event_id, event_id_1)
+                    'Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(
+                        idp_fraud_events[0].idp_event_id, event_id_1
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'INFO',
-                    'Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(idp_fraud_events[1].idp_event_id, event_id_2)
+                    'Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(
+                        idp_fraud_events[1].idp_event_id, event_id_2
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[2].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[2].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[3].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[3].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
@@ -206,17 +228,23 @@ class IdpFraudDataHandlerTest(TestCase):
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[0].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[0].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[1].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[1].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[2].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[2].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
@@ -308,8 +336,10 @@ class IdpFraudDataHandlerTest(TestCase):
                 idp_event_id=idp_fraud_events[2].idp_event_id,
                 idp_entity_id=IDP_ENTITY_ID,
                 fid_code=idp_fraud_events[2].fid_code,
-                contra_indicators=idp_fraud_events[2].contra_indicators + idp_fraud_events[3].contra_indicators + idp_fraud_events[4].contra_indicators,
-                contra_score=idp_fraud_events[2].contra_score + idp_fraud_events[3].contra_score + idp_fraud_events[4].contra_score,
+                contra_indicators=idp_fraud_events[2].contra_indicators + idp_fraud_events[3].contra_indicators
+                                                                        + idp_fraud_events[4].contra_indicators,
+                contra_score=idp_fraud_events[2].contra_score + idp_fraud_events[3].contra_score
+                                                              + idp_fraud_events[4].contra_score,
                 request_id=idp_fraud_events[2].request_id,
                 client_ip_address=idp_fraud_events[2].client_ip_address,
                 pid=idp_fraud_events[2].pid
@@ -335,27 +365,37 @@ class IdpFraudDataHandlerTest(TestCase):
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[0].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[0].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[1].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[1].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[2].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[2].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[3].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[3].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[4].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[4].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
@@ -369,7 +409,7 @@ class IdpFraudDataHandlerTest(TestCase):
 
     def test_invalid_data_causes_error(self):
         idp_fraud_events = self.__generate_test_idp_fraud_events()
-        self.__write_import_file_to_s3(idp_fraud_events, [
+        self.__write_import_file_to_s3(idp_fraud_events, error_rows=[
             '"01/01/2019 11:00",,,'
         ])
 
@@ -390,22 +430,30 @@ class IdpFraudDataHandlerTest(TestCase):
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[0].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[0].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[1].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[1].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[2].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[2].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
                     'WARNING',
-                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_events[3].idp_event_id)
+                    'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                        idp_fraud_events[3].idp_event_id
+                    )
                 ),
                 (
                     'idp_fraud_data_handler',
@@ -420,7 +468,11 @@ class IdpFraudDataHandlerTest(TestCase):
             )
             self.__assert_upload_session_exists_in_database(False)
             self.__assert_events_exist_in_database(idp_fraud_events)
-            self.__assert_error_in_database_failure_table(6, '**Row Exception**', 'Failed to store IDP fraud event: list index out of range (line 6)')
+            self.__assert_error_in_database_failure_table(
+                6,
+                '**Row Exception**',
+                'Failed to store IDP fraud event: list index out of range (line 6)'
+            )
             self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.ERROR_FOLDER)
 
     def test_handles_dates_in_different_formats_and_dst(self):
@@ -458,15 +510,34 @@ class IdpFraudDataHandlerTest(TestCase):
             self.__assert_events_exist_in_database(idp_fraud_events)
             self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.SUCCESS_FOLDER)
 
+    @parameterized.expand([
+        ["comma", ","],
+        ["lf", "\n"],
+        ["crlf", "\r\n"],
+    ])
+    def test_different_delimiters_in_contra_indicator_list(self, name, delimiter):
+        idp_fraud_events = self.__generate_test_idp_fraud_events()
+
+        self.__write_import_file_to_s3(idp_fraud_events, delimiter)
+
+        with LogCapture('idp_fraud_data_handler', propagate=False):
+            idp_fraud_data_handler.idp_fraud_data_events(self.__create_s3_event(), None)
+
+            self.__assert_upload_session_exists_in_database(True)
+            self.__assert_events_exist_in_database(idp_fraud_events)
+            self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.SUCCESS_FOLDER)
 
     def __assert_upload_file_has_been_moved_to_folder(self, folder):
         self.assertFalse(file_exists_in_s3(UPLOAD_BUCKET_NAME, UPLOAD_FILE_NAME))
-        self.assertTrue(file_exists_in_s3(UPLOAD_BUCKET_NAME, '{}/{}'.format(folder, os.path.basename(UPLOAD_FILE_NAME))))
+        self.assertTrue(file_exists_in_s3(
+            UPLOAD_BUCKET_NAME,
+            '{}/{}'.format(folder, os.path.basename(UPLOAD_FILE_NAME))
+        ))
 
     def __assert_upload_session_exists_in_database(self, passed_validation):
         with RunInTransaction(self.db_connection) as cursor:
             cursor.execute("""
-                SELECT 
+                SELECT
                     id,
                     source_file_name,
                     idp_entity_id,
@@ -486,7 +557,7 @@ class IdpFraudDataHandlerTest(TestCase):
     def __assert_error_in_database_failure_table(self, row, field, message):
         with RunInTransaction(self.db_connection) as cursor:
             cursor.execute("""
-                SELECT 
+                SELECT
                     id,
                     upload_session_id,
                     row,
@@ -507,7 +578,7 @@ class IdpFraudDataHandlerTest(TestCase):
         with RunInTransaction(self.db_connection) as cursor:
             for event in idp_fraud_events:
                 cursor.execute("""
-                    SELECT 
+                    SELECT
                         a.id,
                         a.idp_entity_id,
                         a.idp_event_id,
@@ -522,14 +593,18 @@ class IdpFraudDataHandlerTest(TestCase):
                         b.source_file_name
                       FROM idp_data.idp_fraud_events a
                      INNER JOIN idp_data.upload_sessions b ON a.upload_session_id = b.id
-                     WHERE a.idp_entity_id = %s 
+                     WHERE a.idp_entity_id = %s
                        AND a.idp_event_id = %s
                 """, [event.idp_entity_id, event.idp_event_id])
                 result = cursor.fetchone()
 
                 self.assertIsNotNone(result)
                 self.assertIsNotNone(result[0])
-                self.assertEqual(result[3].timestamp(), dateparser.parse(event.timestamp, settings={'TIMEZONE': idp_fraud_data_handler.DEFAULT_TIMEZONE}).timestamp())
+                self.assertEqual(
+                    result[3].timestamp(),
+                    dateparser.parse(event.timestamp,
+                                     settings={'TIMEZONE': idp_fraud_data_handler.DEFAULT_TIMEZONE}).timestamp()
+                )
                 self.assertEqual(result[4], event.fid_code)
                 self.assertEqual(result[5], event.request_id)
                 self.assertEqual(result[6], event.pid)
@@ -538,10 +613,11 @@ class IdpFraudDataHandlerTest(TestCase):
                 self.assertIsNotNone(result[10])
                 self.assertEqual(result[11], UPLOAD_FILE_NAME)
 
-                if not fraud_events is None:
+                if fraud_events is not None:
                     event_id = None
-                    matched_fraud_events = [e for e in fraud_events if e.details['idp_fraud_event_id'] == event.idp_event_id
-                                            and e.details['idp_entity_id'] == event.idp_entity_id]
+                    matched_fraud_events = \
+                        [e for e in fraud_events if e.details['idp_fraud_event_id'] == event.idp_event_id
+                         and e.details['idp_entity_id'] == event.idp_entity_id]
                     if matched_fraud_events:
                         event_id = matched_fraud_events[0].event_id
                     self.assertEqual(result[9], event_id)
@@ -574,9 +650,11 @@ class IdpFraudDataHandlerTest(TestCase):
             Bucket=UPLOAD_BUCKET_NAME,
         )
 
-    def __write_import_file_to_s3(self, idp_fraud_events, error_rows=[]):
-        rows = ['FID_Event_Time, EVENT_ID, FID_code, contraindicators_raised, Contra_score, Authentication_ID, Client_IPAddress, PID']
-        rows.extend([self.__idp_fraud_event_to_csv_string(event) for event in idp_fraud_events])
+    def __write_import_file_to_s3(self, idp_fraud_events, contra_delimiter=',', error_rows=[]):
+        rows = [
+            'Event Time,Event ID,FID code,Contra Indicators,Contra Score, Request ID, Client IP Address, PID'
+        ]
+        rows.extend([self.__idp_fraud_event_to_csv_string(event, contra_delimiter) for event in idp_fraud_events])
         rows.extend(error_rows)
         self.__write_to_s3(UPLOAD_BUCKET_NAME, UPLOAD_FILE_NAME, '\n'.join(rows))
 
@@ -591,13 +669,6 @@ class IdpFraudDataHandlerTest(TestCase):
             Body=content,
             Tagging=urllib.parse.urlencode(tags)
         )
-
-    def __setup_stub_aws_config(self):
-        os.environ = {
-            'AWS_DEFAULT_REGION': 'eu-west-2',
-            'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
-            'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY'
-        }
 
     def __create_s3_event(self, alternate_file_name=None):
         return {
@@ -615,12 +686,12 @@ class IdpFraudDataHandlerTest(TestCase):
             ]
         }
 
-    def __idp_fraud_event_to_csv_string(self, idp_fraud_event):
+    def __idp_fraud_event_to_csv_string(self, idp_fraud_event, contra_delimiter):
         return '"{}","{}","{}","{}",{},"{}","{}","{}"'.format(
             idp_fraud_event.timestamp,
             idp_fraud_event.idp_event_id,
             idp_fraud_event.fid_code,
-            ','.join(idp_fraud_event.contra_indicators),
+            contra_delimiter.join(idp_fraud_event.contra_indicators),
             idp_fraud_event.contra_score,
             idp_fraud_event.request_id,
             idp_fraud_event.client_ip_address,

@@ -3,6 +3,7 @@ import os
 
 import boto3
 
+from src.common import get_database_password
 from src.database import create_db_connection, write_audit_event_to_database, \
     write_billing_event_to_database, write_fraud_event_to_database
 from src.decryption import decrypt_message
@@ -10,7 +11,6 @@ from src.event_mapper import event_from_json
 from src.kms import decrypt
 from src.s3 import fetch_decryption_key
 from src.sqs import fetch_single_message, delete_message
-from src.common import get_database_password
 
 
 # noinspection PyUnusedLocal

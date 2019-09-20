@@ -1,21 +1,22 @@
+import csv
 import logging
 import os
-import csv
-import codecs
+import re
+
 import dateparser
 
-from src.database import create_db_connection, write_import_session, write_idp_fraud_event_to_database, \
-    update_session_as_validated, write_upload_error, RunInTransaction
-from src.s3 import fetch_import_file, fetch_object_tags, move_file
-from src.idp_fraud_event import IdpFraudEvent
 from src.common import get_database_password
+from src.database import create_db_connection, write_import_session, write_idp_fraud_event_to_database, \
+    update_session_as_validated, write_upload_error
+from src.idp_fraud_event import IdpFraudEvent
+from src.s3 import fetch_object_tags, move_file, download_import_file
 from src.upload_session import UploadSession
 
-SUCCESS_FOLDER='success'
-ERROR_FOLDER='error'
-DEFAULT_TIMEZONE='Europe/London'
-DEFAULT_SKIP_HEADER=True
-DEFAULT_DIALECT='excel'
+SUCCESS_FOLDER = 'success'
+ERROR_FOLDER = 'error'
+DEFAULT_TIMEZONE = 'Europe/London'
+DEFAULT_SKIP_HEADER = True
+DEFAULT_DIALECT = 'excel'
 logger = logging.getLogger('idp_fraud_data_handler')
 logger.setLevel(logging.INFO)
 
@@ -32,31 +33,41 @@ def create_import_session(bucket, filename, idp_entity_id, userid, db_connection
 def process_file(bucket, filename, upload_session, db_connection,
                  skip_header=DEFAULT_SKIP_HEADER, dialect=DEFAULT_DIALECT, timezone=DEFAULT_TIMEZONE):
     logger.info('Processing data for IDP {}'.format(upload_session.idp_entity_id))
-    iterable = fetch_import_file(bucket, filename)
-    reader = csv.reader(codecs.iterdecode(iterable, 'utf-8'), dialect=dialect)
-    errors_occurred = False
-    skip_row = skip_header
-    row_number = 0
 
-    for row in reader:
-        row_number = row_number + 1
-        if skip_row:
-            skip_row = False
-            continue
+    temp_file = download_import_file(bucket, filename)
+    with open(temp_file, newline='') as csvfile:
+        reader = csv.reader(csvfile, dialect=dialect)
+        errors_occurred = False
+        skip_row = skip_header
+        row_number = 0
 
-        try:
-            idp_fraud_event = parse_line(row, upload_session.idp_entity_id, timezone)
-            event_id = write_idp_fraud_event_to_database(upload_session, idp_fraud_event, db_connection, logger)
-            if event_id:
-                logger.info('Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(idp_fraud_event.idp_event_id, event_id))
-            else:
-                logger.warning('Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(idp_fraud_event.idp_event_id))
+        for row in reader:
+            row_number = row_number + 1
+            if skip_row:
+                skip_row = False
+                continue
 
-        except Exception as exception:
-            message = 'Failed to store IDP fraud event: {} (line {})'.format(exception, row_number)
-            logger.exception(message)
-            write_upload_error(upload_session, row_number, '**Row Exception**', message, db_connection)
-            errors_occurred = True
+            try:
+                idp_fraud_event = parse_line(row, upload_session.idp_entity_id, timezone)
+                event_id = write_idp_fraud_event_to_database(upload_session, idp_fraud_event, db_connection, logger)
+                if event_id:
+                    logger.info(
+                        'Successfully wrote IDP fraud event ID {} to database and found matching fraud event {}'.format(
+                            idp_fraud_event.idp_event_id, event_id
+                        )
+                    )
+                else:
+                    logger.warning(
+                        'Successfully wrote IDP fraud event ID {} to database BUT no matching fraud event found'.format(
+                            idp_fraud_event.idp_event_id
+                        )
+                    )
+
+            except Exception as exception:
+                message = 'Failed to store IDP fraud event: {} (line {})'.format(exception, row_number)
+                logger.exception(message)
+                write_upload_error(upload_session, row_number, '**Row Exception**', message, db_connection)
+                errors_occurred = True
 
     return not errors_occurred
 
@@ -67,7 +78,7 @@ def parse_line(row, idp_entity_id, timezone=DEFAULT_TIMEZONE):
         timestamp=dateparser.parse(row[0], settings={'TIMEZONE': timezone}),
         idp_event_id=row[1],
         fid_code=row[2],
-        contra_indicators=row[3].split(","),
+        contra_indicators=re.split(',|\n|\r\n', row[3]),
         contra_score=row[4],
         request_id=row[5],
         client_ip_address=row[6],

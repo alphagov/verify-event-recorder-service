@@ -1,18 +1,24 @@
-import os
-import boto3
 import base64
+import os
 import uuid
+from datetime import datetime
+from unittest import TestCase
+
+import boto3
 import psycopg2
 from moto import mock_sqs, mock_s3, mock_kms
-from unittest import TestCase
-from datetime import datetime
-from testfixtures import LogCapture
 from retrying import retry
+from testfixtures import LogCapture
 
 from src import event_handler
 from src.database import RunInTransaction
+from test.helpers import setup_stub_aws_config, clean_db, create_event_string, create_fraud_event_string, \
+    MINIMUM_LEVEL_OF_ASSURANCE, ENCRYPTION_KEY, create_billing_event_without_minimum_level_of_assurance_string, \
+    create_fraud_event_without_idp_fraud_event_id_string, EVENT_TYPE, TIMESTAMP, ORIGINATING_SERVICE, \
+    SESSION_EVENT_TYPE, TRANSACTION_ENTITY_ID, FRAUD_SESSION_EVENT_TYPE, DB_PASSWORD, \
+    PID, REQUEST_ID, IDP_ENTITY_ID, PROVIDED_LEVEL_OF_ASSURANCE, REQUIRED_LEVEL_OF_ASSURANCE, GPG45_STATUS
 from test.test_encrypter import encrypt_string
-from test.helpers import *
+
 
 @mock_sqs
 @mock_s3

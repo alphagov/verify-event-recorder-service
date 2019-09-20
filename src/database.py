@@ -224,7 +224,12 @@ def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, db_connec
                     %(pid)s,
                     %(client_ip_address)s,
                     %(contra_score)s,
-                    (SELECT event_id FROM billing.fraud_events WHERE fraud_event_id = %(idp_event_id)s AND entity_id = %(idp_entity_id)s),
+                    (
+                        SELECT event_id
+                          FROM billing.fraud_events
+                         WHERE fraud_event_id = %(idp_event_id)s
+                           AND entity_id = %(idp_entity_id)s
+                    ),
                     %(session_id)s
                  )
                  ON CONFLICT (idp_entity_id, idp_event_id)
@@ -272,10 +277,16 @@ def write_idp_fraud_event_to_database(upload_session, idp_fraud_event, db_connec
             # The event has already been recorded - don't throw an exception (no need to retry this message), just
             # log a notification and move on.
             logger.warning(
-                'Failed to store an IDP fraud event. The Event ID {} already exists in the database'.format(idp_fraud_event.idp_event_id))
+                'Failed to store an IDP fraud event. The Event ID {} already exists in the database'.format(
+                    idp_fraud_event.idp_event_id
+                )
+            )
         else:
             logger.warning(
-                'Failed to store an IDP fraud event [Event ID {}] due to integrity error'.format(idp_fraud_event.idp_event_id))
+                'Failed to store an IDP fraud event [Event ID {}] due to integrity error'.format(
+                    idp_fraud_event.idp_event_id
+                )
+            )
             raise integrityError
 
 
