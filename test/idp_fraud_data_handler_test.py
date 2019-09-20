@@ -1,11 +1,10 @@
 import psycopg2
 import urllib.parse
 import uuid
-import dateutil.parser
+import dateparser
 
 from moto import mock_s3
 from unittest import TestCase
-from datetime import datetime
 from testfixtures import LogCapture
 from retrying import retry
 
@@ -424,6 +423,42 @@ class IdpFraudDataHandlerTest(TestCase):
             self.__assert_error_in_database_failure_table(6, '**Row Exception**', 'Failed to store IDP fraud event: list index out of range (line 6)')
             self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.ERROR_FOLDER)
 
+    def test_handles_dates_in_different_formats_and_dst(self):
+        idp_fraud_events = self.__generate_test_idp_fraud_events([
+            IdpFraudEvent(
+                timestamp="2019-03-01T02:40:40.1110000Z",
+                idp_event_id="5555555",
+                idp_entity_id=IDP_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["A04", "D02"],
+                contra_score=-5,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="111.222.222.111",
+                pid=str(uuid.uuid4())
+            ),
+            IdpFraudEvent(
+                timestamp="2019-06-01T03:30:30.2220000Z",
+                idp_event_id="6666666",
+                idp_entity_id=IDP_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["D15"],
+                contra_score=-5,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="222.111.111.222",
+                pid=str(uuid.uuid4())
+            ),
+        ])
+
+        self.__write_import_file_to_s3(idp_fraud_events)
+
+        with LogCapture('idp_fraud_data_handler', propagate=False):
+            idp_fraud_data_handler.idp_fraud_data_events(self.__create_s3_event(), None)
+
+            self.__assert_upload_session_exists_in_database(True)
+            self.__assert_events_exist_in_database(idp_fraud_events)
+            self.__assert_upload_file_has_been_moved_to_folder(idp_fraud_data_handler.SUCCESS_FOLDER)
+
+
     def __assert_upload_file_has_been_moved_to_folder(self, folder):
         self.assertFalse(file_exists_in_s3(UPLOAD_BUCKET_NAME, UPLOAD_FILE_NAME))
         self.assertTrue(file_exists_in_s3(UPLOAD_BUCKET_NAME, '{}/{}'.format(folder, os.path.basename(UPLOAD_FILE_NAME))))
@@ -494,7 +529,7 @@ class IdpFraudDataHandlerTest(TestCase):
 
                 self.assertIsNotNone(result)
                 self.assertIsNotNone(result[0])
-                self.assertEqual(result[3], dateutil.parser.parse(event.timestamp))
+                self.assertEqual(result[3].timestamp(), dateparser.parse(event.timestamp, settings={'TIMEZONE': idp_fraud_data_handler.DEFAULT_TIMEZONE}).timestamp())
                 self.assertEqual(result[4], event.fid_code)
                 self.assertEqual(result[5], event.request_id)
                 self.assertEqual(result[6], event.pid)
@@ -594,50 +629,50 @@ class IdpFraudDataHandlerTest(TestCase):
 
     def __generate_test_idp_fraud_events(self, additional_events=[]):
         idp_fraud_events = [
-        IdpFraudEvent(
-            timestamp="05/08/2019 11:54",
-            idp_event_id="1111111",
-            idp_entity_id=IDP_ENTITY_ID,
-            fid_code="DF01",
-            contra_indicators=["A04", "D02"],
-            contra_score=-5,
-            request_id="_{}".format(uuid.uuid4()),
-            client_ip_address="111.222.222.111",
-            pid=str(uuid.uuid4())
-        ),
-        IdpFraudEvent(
-            timestamp="07/08/2019 16:37",
-            idp_event_id="2222222",
-            idp_entity_id=IDP_ENTITY_ID,
-            fid_code="DF01",
-            contra_indicators=["ROLB", "D15"],
-            contra_score=-5,
-            request_id="_{}".format(uuid.uuid4()),
-            client_ip_address="222.111.111.222",
-            pid=str(uuid.uuid4())
-        ),
-        IdpFraudEvent(
-            timestamp="10/08/2019 09:24",
-            idp_event_id="3333333",
-            idp_entity_id=IDP_ENTITY_ID,
-            fid_code="DF01",
-            contra_indicators=["A01", "A05", "V03"],
-            contra_score=-10,
-            request_id="_{}".format(uuid.uuid4()),
-            client_ip_address="111.111.111.111",
-            pid=str(uuid.uuid4())
-        ),
-        IdpFraudEvent(
-            timestamp="23/08/2019 21:22",
-            idp_event_id="4444444",
-            idp_entity_id=IDP_ENTITY_ID,
-            fid_code="DF01",
-            contra_indicators=["D02"],
-            contra_score=-4,
-            request_id="_{}".format(uuid.uuid4()),
-            client_ip_address="222.222.222.222",
-            pid=str(uuid.uuid4())
-        ),
+            IdpFraudEvent(
+                timestamp="05/08/2019 11:54",
+                idp_event_id="1111111",
+                idp_entity_id=IDP_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["A04", "D02"],
+                contra_score=-5,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="111.222.222.111",
+                pid=str(uuid.uuid4())
+            ),
+            IdpFraudEvent(
+                timestamp="07/08/2019 16:37",
+                idp_event_id="2222222",
+                idp_entity_id=IDP_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["Z01", "D15"],
+                contra_score=-5,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="222.111.111.222",
+                pid=str(uuid.uuid4())
+            ),
+            IdpFraudEvent(
+                timestamp="10/08/2019 09:24",
+                idp_event_id="3333333",
+                idp_entity_id=IDP_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["A01", "A05", "V03"],
+                contra_score=-10,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="111.111.111.111",
+                pid=str(uuid.uuid4())
+            ),
+            IdpFraudEvent(
+                timestamp="23/08/2019 21:22",
+                idp_event_id="4444444",
+                idp_entity_id=IDP_ENTITY_ID,
+                fid_code="DF01",
+                contra_indicators=["D02"],
+                contra_score=-4,
+                request_id="_{}".format(uuid.uuid4()),
+                client_ip_address="222.222.222.222",
+                pid=str(uuid.uuid4())
+            ),
         ]
 
         idp_fraud_events.extend(additional_events)
