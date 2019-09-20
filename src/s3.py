@@ -19,3 +19,9 @@ def fetch_import_file(bucket_name, filename):
 def delete_import_file(bucket_name, filename):
     s3_client = boto3.client('s3')
     s3_client.delete_object(Bucket=bucket_name, Key=filename)
+
+
+def fetch_object_tags(bucket_name, filename):
+    s3_client = boto3.client('s3')
+    response = s3_client.get_object_tagging(Bucket=bucket_name, Key=filename)
+    return {tag['Key']: tag['Value'] for tag in response['TagSet']}
