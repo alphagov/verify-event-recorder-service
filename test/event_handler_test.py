@@ -1,34 +1,23 @@
-import os
-import boto3
 import base64
-import json
+import os
 import uuid
+from datetime import datetime
+from unittest import TestCase
+
+import boto3
 import psycopg2
 from moto import mock_sqs, mock_s3, mock_kms
-from unittest import TestCase
-from datetime import datetime
-from testfixtures import LogCapture
 from retrying import retry
+from testfixtures import LogCapture
 
 from src import event_handler
 from src.database import RunInTransaction
+from test.helpers import setup_stub_aws_config, clean_db, create_event_string, create_fraud_event_string, \
+    MINIMUM_LEVEL_OF_ASSURANCE, ENCRYPTION_KEY, create_billing_event_without_minimum_level_of_assurance_string, \
+    create_fraud_event_without_idp_fraud_event_id_string, EVENT_TYPE, TIMESTAMP, ORIGINATING_SERVICE, \
+    SESSION_EVENT_TYPE, TRANSACTION_ENTITY_ID, FRAUD_SESSION_EVENT_TYPE, DB_PASSWORD, \
+    PID, REQUEST_ID, IDP_ENTITY_ID, PROVIDED_LEVEL_OF_ASSURANCE, REQUIRED_LEVEL_OF_ASSURANCE, GPG45_STATUS
 from test.test_encrypter import encrypt_string
-
-EVENT_TYPE = 'session_event'
-TIMESTAMP = 1518264452000  # '2018-02-10 12:07:32'
-ORIGINATING_SERVICE = 'test service'
-ENCRYPTION_KEY = b'sixteen byte key'
-DB_PASSWORD = 'secretPassword'
-SESSION_EVENT_TYPE = 'idp_authn_succeeded'
-PID = '26b1e565bb63e7fc3c2ccf4e018f50b84953b02b89d523654034e24a4907d50c'
-REQUEST_ID = '_a217717d-ce3d-407c-88c1-d3d592b6db8c'
-IDP_ENTITY_ID = 'idp entity id'
-TRANSACTION_ENTITY_ID = 'transaction entity id'
-MINIMUM_LEVEL_OF_ASSURANCE = 'LEVEL_2'
-PROVIDED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
-REQUIRED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
-FRAUD_SESSION_EVENT_TYPE = 'fraud_detected'
-GPG45_STATUS = 'AA01'
 
 
 @mock_sqs
@@ -59,7 +48,7 @@ class EventHandlerTest(TestCase):
         self.__setup_sqs()
 
     def tearDown(self):
-        self.__clean_db()
+        clean_db(self.db_connection)
 
     def test_reads_messages_from_queue_with_key_from_s3(self):
         self.__setup_s3()
@@ -295,14 +284,6 @@ class EventHandlerTest(TestCase):
         )
         return response['Attributes'][attribute]
 
-    def __clean_db(self):
-        with RunInTransaction(self.db_connection) as cursor:
-            cursor.execute("""
-                DELETE FROM audit.audit_events;
-                DELETE FROM billing.billing_events;
-                DELETE FROM billing.fraud_events;
-            """)
-
     def __assert_audit_events_table_has_billing_event_records(self, expected_events, minimum_level_of_assurance):
         for event in expected_events:
             with RunInTransaction(self.db_connection) as cursor:
@@ -516,87 +497,3 @@ class EventHandlerTest(TestCase):
         )
         os.environ['DECRYPTION_KEY_BUCKET_NAME'] = bucket_name
         os.environ['DECRYPTION_KEY_FILE_NAME'] = filename
-
-
-def setup_stub_aws_config():
-    os.environ = {
-        'AWS_DEFAULT_REGION': 'eu-west-2',
-        'AWS_ACCESS_KEY_ID': 'AWS_ACCESS_KEY_ID',
-        'AWS_SECRET_ACCESS_KEY': 'AWS_SECRET_ACCESS_KEY'
-    }
-
-
-def create_event_string(event_id, session_id):
-    return json.dumps({
-        'eventId': event_id,
-        'eventType': EVENT_TYPE,
-        'timestamp': TIMESTAMP,
-        'originatingService': ORIGINATING_SERVICE,
-        'sessionId': session_id,
-        'details': {
-            'session_event_type': SESSION_EVENT_TYPE,
-            'pid': PID,
-            'request_id': REQUEST_ID,
-            'idp_entity_id': IDP_ENTITY_ID,
-            'transaction_entity_id': TRANSACTION_ENTITY_ID,
-            'minimum_level_of_assurance': MINIMUM_LEVEL_OF_ASSURANCE,
-            'provided_level_of_assurance': PROVIDED_LEVEL_OF_ASSURANCE,
-            'required_level_of_assurance': REQUIRED_LEVEL_OF_ASSURANCE
-        }
-    })
-
-
-def create_billing_event_without_minimum_level_of_assurance_string(event_id, session_id):
-    return json.dumps({
-        'eventId': event_id,
-        'eventType': EVENT_TYPE,
-        'timestamp': TIMESTAMP,
-        'originatingService': ORIGINATING_SERVICE,
-        'sessionId': session_id,
-        'details': {
-            'session_event_type': SESSION_EVENT_TYPE,
-            'pid': PID,
-            'request_id': REQUEST_ID,
-            'idp_entity_id': IDP_ENTITY_ID,
-            'transaction_entity_id': TRANSACTION_ENTITY_ID,
-            'provided_level_of_assurance': PROVIDED_LEVEL_OF_ASSURANCE,
-            'required_level_of_assurance': REQUIRED_LEVEL_OF_ASSURANCE
-        }
-    })
-
-
-def create_fraud_event_string(event_id, session_id, fraud_event_id):
-    return json.dumps({
-        'eventId': event_id,
-        'eventType': EVENT_TYPE,
-        'timestamp': TIMESTAMP,
-        'originatingService': ORIGINATING_SERVICE,
-        'sessionId': session_id,
-        'details': {
-            'session_event_type': FRAUD_SESSION_EVENT_TYPE,
-            'pid': PID,
-            'request_id': REQUEST_ID,
-            'idp_entity_id': IDP_ENTITY_ID,
-            'idp_fraud_event_id': fraud_event_id,
-            'gpg45_status': GPG45_STATUS,
-            'transaction_entity_id': TRANSACTION_ENTITY_ID
-        }
-    })
-
-
-def create_fraud_event_without_idp_fraud_event_id_string(event_id, session_id):
-    return json.dumps({
-        'eventId': event_id,
-        'eventType': EVENT_TYPE,
-        'timestamp': TIMESTAMP,
-        'originatingService': ORIGINATING_SERVICE,
-        'sessionId': session_id,
-        'details': {
-            'session_event_type': FRAUD_SESSION_EVENT_TYPE,
-            'pid': PID,
-            'request_id': REQUEST_ID,
-            'idp_entity_id': IDP_ENTITY_ID,
-            'gpg45_status': GPG45_STATUS,
-            'transaction_entity_id': TRANSACTION_ENTITY_ID
-        }
-    })
