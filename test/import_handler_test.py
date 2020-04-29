@@ -26,7 +26,7 @@ IDP_ENTITY_ID = 'idp entity id'
 TRANSACTION_ENTITY_ID = 'transaction entity id'
 MINIMUM_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 PROVIDED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
-REQUIRED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
+PREFERRED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 FRAUD_SESSION_EVENT_TYPE = 'fraud_detected'
 GPG45_STATUS = 'AA01'
 IMPORT_BUCKET_NAME = 's3-import-bucket'
@@ -150,7 +150,7 @@ class ImportHandlerTest(TestCase):
                         details->>'transaction_entity_id',
                         details->>'minimum_level_of_assurance',
                         details->>'provided_level_of_assurance',
-                        details->>'required_level_of_assurance'
+                        details->>'preferred_level_of_assurance'
                     FROM
                         audit.audit_events
                     WHERE
@@ -171,7 +171,7 @@ class ImportHandlerTest(TestCase):
             self.assertEqual(matching_records[9], TRANSACTION_ENTITY_ID)
             self.assertEqual(matching_records[10], minimum_level_of_assurance)
             self.assertEqual(matching_records[11], PROVIDED_LEVEL_OF_ASSURANCE)
-            self.assertEqual(matching_records[12], REQUIRED_LEVEL_OF_ASSURANCE)
+            self.assertEqual(matching_records[12], PREFERRED_LEVEL_OF_ASSURANCE)
 
     def __assert_audit_events_table_has_fraud_event_records(self, expected_events):
         for event in expected_events:
@@ -220,7 +220,7 @@ class ImportHandlerTest(TestCase):
                         request_id,
                         idp_entity_id,
                         minimum_level_of_assurance,
-                        required_level_of_assurance,
+                        preferred_level_of_assurance,
                         provided_level_of_assurance
                     FROM
                         billing.billing_events
@@ -238,7 +238,7 @@ class ImportHandlerTest(TestCase):
             self.assertEqual(matching_records[4], IDP_ENTITY_ID)
             self.assertEqual(matching_records[5], MINIMUM_LEVEL_OF_ASSURANCE)
             self.assertEqual(matching_records[6], PROVIDED_LEVEL_OF_ASSURANCE)
-            self.assertEqual(matching_records[7], REQUIRED_LEVEL_OF_ASSURANCE)
+            self.assertEqual(matching_records[7], PREFERRED_LEVEL_OF_ASSURANCE)
 
     def __assert_fraud_events_table_has_fraud_event_records(self, expected_fraud_events):
         for fraud_event in expected_fraud_events:
@@ -351,7 +351,7 @@ class ImportHandlerTest(TestCase):
                     'transaction_entity_id': TRANSACTION_ENTITY_ID,
                     'minimum_level_of_assurance': MINIMUM_LEVEL_OF_ASSURANCE,
                     'provided_level_of_assurance': PROVIDED_LEVEL_OF_ASSURANCE,
-                    'required_level_of_assurance': REQUIRED_LEVEL_OF_ASSURANCE
+                    'preferred_level_of_assurance': PREFERRED_LEVEL_OF_ASSURANCE
                 }
             }
         })
