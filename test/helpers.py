@@ -16,7 +16,7 @@ IDP_ENTITY_ID = 'idp entity id'
 TRANSACTION_ENTITY_ID = 'transaction entity id'
 MINIMUM_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 PROVIDED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
-REQUIRED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
+PREFERRED_LEVEL_OF_ASSURANCE = 'LEVEL_2'
 FRAUD_SESSION_EVENT_TYPE = 'fraud_detected'
 GPG45_STATUS = 'AA01'
 
@@ -57,7 +57,7 @@ def create_event_string(event_id, session_id):
             'transaction_entity_id': TRANSACTION_ENTITY_ID,
             'minimum_level_of_assurance': MINIMUM_LEVEL_OF_ASSURANCE,
             'provided_level_of_assurance': PROVIDED_LEVEL_OF_ASSURANCE,
-            'required_level_of_assurance': REQUIRED_LEVEL_OF_ASSURANCE
+            'preferred_level_of_assurance': PREFERRED_LEVEL_OF_ASSURANCE
         }
     })
 
@@ -76,7 +76,7 @@ def create_billing_event_without_minimum_level_of_assurance_string(event_id, ses
             'idp_entity_id': IDP_ENTITY_ID,
             'transaction_entity_id': TRANSACTION_ENTITY_ID,
             'provided_level_of_assurance': PROVIDED_LEVEL_OF_ASSURANCE,
-            'required_level_of_assurance': REQUIRED_LEVEL_OF_ASSURANCE
+            'preferred_level_of_assurance': PREFERRED_LEVEL_OF_ASSURANCE
         }
     })
 

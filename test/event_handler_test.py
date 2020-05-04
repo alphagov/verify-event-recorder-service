@@ -16,7 +16,7 @@ from test.helpers import setup_stub_aws_config, clean_db, create_event_string, c
     MINIMUM_LEVEL_OF_ASSURANCE, ENCRYPTION_KEY, create_billing_event_without_minimum_level_of_assurance_string, \
     create_fraud_event_without_idp_fraud_event_id_string, EVENT_TYPE, TIMESTAMP, ORIGINATING_SERVICE, \
     SESSION_EVENT_TYPE, TRANSACTION_ENTITY_ID, FRAUD_SESSION_EVENT_TYPE, DB_PASSWORD, \
-    PID, REQUEST_ID, IDP_ENTITY_ID, PROVIDED_LEVEL_OF_ASSURANCE, REQUIRED_LEVEL_OF_ASSURANCE, GPG45_STATUS
+    PID, REQUEST_ID, IDP_ENTITY_ID, PROVIDED_LEVEL_OF_ASSURANCE, PREFERRED_LEVEL_OF_ASSURANCE, GPG45_STATUS
 from test.test_encrypter import encrypt_string
 
 
@@ -301,7 +301,7 @@ class EventHandlerTest(TestCase):
                         details->>'transaction_entity_id',
                         details->>'minimum_level_of_assurance',
                         details->>'provided_level_of_assurance',
-                        details->>'required_level_of_assurance'
+                        details->>'preferred_level_of_assurance'
                     FROM
                         audit.audit_events
                     WHERE
@@ -322,7 +322,7 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[9], TRANSACTION_ENTITY_ID)
             self.assertEqual(matching_records[10], minimum_level_of_assurance)
             self.assertEqual(matching_records[11], PROVIDED_LEVEL_OF_ASSURANCE)
-            self.assertEqual(matching_records[12], REQUIRED_LEVEL_OF_ASSURANCE)
+            self.assertEqual(matching_records[12], PREFERRED_LEVEL_OF_ASSURANCE)
 
     def __assert_audit_events_table_has_fraud_event_records(self, expected_events):
         for event in expected_events:
@@ -383,7 +383,7 @@ class EventHandlerTest(TestCase):
                         request_id,
                         idp_entity_id,
                         minimum_level_of_assurance,
-                        required_level_of_assurance,
+                        preferred_level_of_assurance,
                         provided_level_of_assurance,
                         event_id,
                         transaction_entity_id
@@ -402,7 +402,7 @@ class EventHandlerTest(TestCase):
             self.assertEqual(matching_records[4], IDP_ENTITY_ID)
             self.assertEqual(matching_records[5], MINIMUM_LEVEL_OF_ASSURANCE)
             self.assertEqual(matching_records[6], PROVIDED_LEVEL_OF_ASSURANCE)
-            self.assertEqual(matching_records[7], REQUIRED_LEVEL_OF_ASSURANCE)
+            self.assertEqual(matching_records[7], PREFERRED_LEVEL_OF_ASSURANCE)
             self.assertEqual(matching_records[8], event_id)
             self.assertEqual(matching_records[9], TRANSACTION_ENTITY_ID)
 

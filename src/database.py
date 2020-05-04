@@ -70,7 +70,7 @@ def write_billing_event_to_database(event, db_connection):
                     request_id,
                     idp_entity_id,
                     minimum_level_of_assurance,
-                    required_level_of_assurance,
+                    preferred_level_of_assurance,
                     provided_level_of_assurance,
                     event_id,
                     transaction_entity_id
@@ -84,7 +84,7 @@ def write_billing_event_to_database(event, db_connection):
                 event.details['request_id'],
                 event.details['idp_entity_id'],
                 event.details['minimum_level_of_assurance'],
-                event.details['required_level_of_assurance'],
+                event.details['preferred_level_of_assurance'],
                 event.details['provided_level_of_assurance'],
                 event.event_id,
                 event.details['transaction_entity_id']
