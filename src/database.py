@@ -78,7 +78,7 @@ def write_billing_event_to_database(event, db_connection):
                     transaction_entity_id
                 )
                 VALUES
-                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s);
             """, [
                 datetime.fromtimestamp(int(event.timestamp) / 1e3),
                 event.session_id,
