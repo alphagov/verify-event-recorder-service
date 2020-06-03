@@ -61,7 +61,6 @@ def write_audit_event_to_database(event, db_connection):
 def write_billing_event_to_database(event, db_connection):
     try:
         preferred_LOA = event.details['preferred_level_of_assurance'] if 'preferred_level_of_assurance' in event.details else None
-        required_LOA = event.details['required_level_of_assurance'] if 'required_level_of_assurance' in event.details else None
 
         with RunInTransaction(db_connection) as cursor:
             cursor.execute("""
@@ -74,7 +73,6 @@ def write_billing_event_to_database(event, db_connection):
                     idp_entity_id,
                     minimum_level_of_assurance,
                     preferred_level_of_assurance,
-                    required_level_of_assurance,
                     provided_level_of_assurance,
                     event_id,
                     transaction_entity_id
@@ -89,7 +87,6 @@ def write_billing_event_to_database(event, db_connection):
                 event.details['idp_entity_id'],
                 event.details['minimum_level_of_assurance'],
                 preferred_LOA,
-                required_LOA,
                 event.details['provided_level_of_assurance'],
                 event.event_id,
                 event.details['transaction_entity_id']
