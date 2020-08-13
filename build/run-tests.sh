@@ -3,7 +3,7 @@ set -e
 
 SCRIPT_DIR="$( cd "$(dirname "$0")" ; pwd -P )"
 
-function stop_containers() {
+stop_containers() {
   docker-compose down
 }
 

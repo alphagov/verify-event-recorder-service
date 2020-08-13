@@ -8,7 +8,7 @@ import boto3
 import psycopg2
 from moto import mock_sqs, mock_s3, mock_kms
 from retrying import retry
-from testfixtures import LogCapture
+from testfixtures import LogCapture, OutputCapture
 
 from src import event_handler
 from src.database import RunInTransaction
@@ -221,6 +221,20 @@ class EventHandlerTest(TestCase):
             )
             self.assertEqual(self.__number_of_visible_messages(), '0')
             self.assertEqual(self.__number_of_hidden_messages(), '1')
+
+    def test_event_handler_logs_event_to_stdout(self):
+        self.__setup_s3()
+        with OutputCapture() as output:
+            events = [
+                create_event_string('sample-id-1', 'session-id-1'),
+                create_event_string('sample-id-1', 'session-id-1'),
+            ]
+            self.__encrypt_and_send_to_sqs(events)
+
+            event_handler.store_queued_events(None, None)
+
+            for event in events:
+                self.assertIn(event, output.captured)
 
     def test_records_error_but_does_delete_messages_for_duplicate_events(self):
         self.__setup_s3()

@@ -50,6 +50,12 @@ def store_queued_events(_, __):
         try:
             decrypted_message = decrypt_message(message['Body'], decryption_key)
             event = event_from_json(decrypted_message)
+
+            # Send audit events to this lambda function's CloudWatch log group.
+            # This is the raw JSON event on a line by its self so Splunk can
+            # parse it as JSON.
+            print(decrypted_message)
+
             logger.info('Decrypted event with ID: {0}'.format(event.event_id))
             write_audit_event_to_database(event, db_connection)
             logger.info('Stored audit event: {0}'.format(event.event_id))
