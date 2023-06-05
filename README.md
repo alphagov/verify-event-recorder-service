@@ -1,4 +1,9 @@
 # verify-event-recorder-service
+
+>**GOV.UK Verify has closed**
+>
+>This repository is out of date and has been archived
+
 This service is part of Verify's event recording system; its purpose is to read events from a queue and write them to a
  permanent datastore.
 
